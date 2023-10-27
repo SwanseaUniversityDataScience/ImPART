@@ -1,0 +1,8934 @@
+--data provided in 1169 project based on all women in WDSD aged between 30 and 120 on 30-06-2021
+
+/* All female patients in WDSD, WLGP and PEDW
+ * Excluding:
+ * Records where ALF status code is not 1, 4 or 39
+ * Individuals who died prior to 2010-01-01
+ * Individuals not registered with a SAIL registered GP practice during period 2010-01-01 to 2020-12-31
+ * Individuals without repeat antibiotic prescriptions
+ * Individuals without at least 12 months of data prior to baseline (start of long term antibiotics)
+ * Indivduals with a pregnancy within 40 weeks of baseline (start of long term antibiotics)
+ * Individuals with a catheter code at any date prior to baseline (start of long term antibiotics)
+ * 
+ *  * Where WOB did not match in WDSD and WLGP the date was taken from WDSD
+ */
+
+--STARTING TABLES
+-- eligible inclusions table SAILW1169V.VB_GP_GOOD_ALF_REG_18
+-- antibiotic table SAILW1169V.VB_REPEAT_ABX_PRE1
+
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_DOSE_ABX_PRE_COH3');
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_REPEAT_ABX_ALL_NOEP');
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_REPEAT_ABX_PRE1_COH3');
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_COHORT3_ALL_RPT_ABX');
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_COHORT3_PABX_STR');
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_COHORT3_PABX_STR_STUDY');
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE');
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_COHORT3_ALT_STR');
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_COHORT3_ALT_END');
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_ALTERNATING_PABX_COH3');
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_ABX_DOSE_COH3');
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_PABX_COH3');	
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_PREG');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_CATHETER');
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_COHORT3');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_ETHNICITY');	
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_DIABETES');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_CANCER');	
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_RENAL_DISEASE');	
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_HYPERTENSION');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_HEARTFAIL');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_MS');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_MND');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_PARKINSONS');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_SMH');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_DEMENTIA');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_IHD');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_CVD');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_COPD');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_DIABETES');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_RENAL_STONE');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_ASTHMA');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_ASTHMA_MED');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_BIO_IMM');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_HAEM_CANC');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_DMARDS');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_STEMCELL');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_ORG_TRANS');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_PIM');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_CANC_TREAT');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_STEROID');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_RENAL_STONE_WLGP');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_RENAL_STONE_ICD');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_COHORT_EVENT_ABN_RENAL');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_GP_UTI_COH3');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_GP_ANTIBIOTIC_COH3');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_WLGP_UTI_PRE_COH3');
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_WLGP_UTI_COH3');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_PEDW_DIAG_UTI_COH3');
+CALL FNC.DROP_IF_EXISTS('SESSION.VB_PEDW_EPS_UTI_COH3');
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_PEDW_UTI_COH3');
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_ALL_UTI_COH3');
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_ALL_UTI_COMB_PRE_COH3');
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_REC_UTI_ALF_COH3');
+
+--select all antibiotic rows where ALF_PE is in the eligible population table
+
+CREATE TABLE SAILW1169V.VB_DOSE_ABX_PRE_COH3
+(			ALF_PE	BIGINT,
+			ANTIBX_CATEGORY VARCHAR(20),
+			EVENT_DT DATE,
+			DOSE VARCHAR(10),
+			UNITS VARCHAR(10),
+			GRP INTEGER)
+NOT LOGGED INITIALLY;
+
+INSERT INTO SAILW1169V.VB_DOSE_ABX_PRE_COH3
+		(ALF_PE,
+		ANTIBX_CATEGORY,
+		DOSE,
+		UNITS,
+		EVENT_DT,
+		GRP)
+SELECT 	gp.ALF_PE,
+		rd.ANTIBX_CATEGORY,
+		rd.DOSAGE,
+		rd.UNITS,
+		gp.EVENT_DT,
+		COUNT(gp.ALF_PE) OVER (ORDER BY gp.ALF_PE, rd.ANTIBX_CATEGORY, gp.EVENT_DT) AS GRP -- Used to group prescriptions with multiple doses on same day
+	FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301 AS gp
+	INNER JOIN SAILW1169V.VB_REPEAT_ANTIBX_READ AS rd
+	ON gp.EVENT_CD = rd.READ_CODE
+	AND gp.ALF_STS_CD IN ('1','4','39');
+		
+COMMIT;
+
+--------------------------------------------------------------------------------
+--Create repeat abx table
+--------------------------------------------------------------------------------
+
+--Identify multiple doses.  Where the same antibiotic type was prescribed on the same day with different doses, combine the rows and record the dose as 
+--multi and the units as N/A
+--Keep table SAILW1169V.VB_REPEAT_ABX_ALL_NOEP as a record of all prescriptions
+
+CREATE TABLE SAILW1169V.VB_REPEAT_ABX_ALL_NOEP AS (
+	SELECT	ALF_PE,
+			ANTIBX_CATEGORY,
+			EVENT_DT,
+			DOSE,
+			UNITS,
+			GRP
+FROM SAILW1169V.VB_DOSE_ABX_PRE_COH3)
+WITH NO DATA;
+
+INSERT INTO SAILW1169V.VB_REPEAT_ABX_ALL_NOEP
+		(ALF_PE,
+		ANTIBX_CATEGORY,
+		EVENT_DT,
+		DOSE,
+		UNITS,
+		GRP)
+WITH CTE AS 
+		(SELECT GRP, COUNT(GRP) AS COUNT_GRP
+		FROM SAILW1169V.VB_DOSE_ABX_PRE_COH3
+		GROUP BY GRP
+		HAVING COUNT(GRP)>1)
+SELECT DISTINCT abx.ALF_PE,
+				abx.ANTIBX_CATEGORY,
+				abx.EVENT_DT,
+				'Multi' AS DOSE,
+				'N/A' AS UNITS,
+				CTE.GRP
+		FROM CTE
+		INNER JOIN SAILW1169V.VB_DOSE_ABX_PRE_COH3 AS abx
+		ON CTE.GRP = abx.GRP;
+
+--Insert single dose prescriptions.  Where only one prescription dose was recorded on that date then insert row as is
+INSERT INTO SAILW1169V.VB_REPEAT_ABX_ALL_NOEP
+		(ALF_PE,
+		ANTIBX_CATEGORY,
+		EVENT_DT,
+		DOSE,
+		UNITS,
+		GRP)
+WITH CTE AS 
+(SELECT GRP, COUNT(GRP) AS COUNT_GRP
+FROM SAILW1169V.VB_DOSE_ABX_PRE_COH3
+GROUP BY GRP
+HAVING COUNT(GRP) = 1)
+SELECT DISTINCT abx.ALF_PE,
+				abx.ANTIBX_CATEGORY,
+				abx.EVENT_DT,
+				DOSE,
+				UNITS,
+				CTE.GRP
+	FROM CTE
+	INNER JOIN SAILW1169V.VB_DOSE_ABX_PRE_COH3 AS abx
+	ON CTE.GRP = abx.GRP;
+
+--------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------
+		
+--Add column to identify groups of prescription antibiotic category within specified timescales.
+--Where an antibiotic of the same type was prescribed within the specified time frame then record antibiotic type as RPT_GRP
+		
+ALTER TABLE SAILW1169V.VB_REPEAT_ABX_ALL_NOEP
+ADD COLUMN RPT_GRP VARCHAR(20)
+activate NOT logged INITIALLY;
+			
+--Update by looking back to previous prescription of same abx category
+UPDATE SAILW1169V.VB_REPEAT_ABX_ALL_NOEP
+SET RPT_GRP =
+ CASE WHEN DAYS(EVENT_DT) - DAYS(LAG(EVENT_DT) OVER(PARTITION BY ALF_PE, ANTIBX_CATEGORY ORDER BY EVENT_DT)) BETWEEN 21 and 56
+		THEN ANTIBX_CATEGORY
+	ELSE NULL
+END;
+
+--Where prescription is first in a repeat group obtain abx category by looking forward
+ALTER TABLE SAILW1169V.VB_REPEAT_ABX_ALL_NOEP activate NOT logged INITIALLY;
+			
+UPDATE SAILW1169V.VB_REPEAT_ABX_ALL_NOEP
+SET RPT_GRP =
+ CASE WHEN DAYS(LEAD(EVENT_DT) OVER(PARTITION BY ALF_PE, ANTIBX_CATEGORY ORDER BY EVENT_DT)) - DAYS(EVENT_DT) BETWEEN 21 and 56
+		THEN ANTIBX_CATEGORY
+	ELSE RPT_GRP
+END;
+	
+COMMIT;
+
+--Add column for the first event date in the group where prescriptions for same antibiotic category 21 and 56 days, i.e. repeat prescriptions start date
+
+ALTER TABLE SAILW1169V.VB_REPEAT_ABX_ALL_NOEP
+ADD COLUMN RPT_STR_DT DATE
+activate not logged INITIALLY;
+			
+UPDATE SAILW1169V.VB_REPEAT_ABX_ALL_NOEP
+SET RPT_STR_DT =
+ CASE WHEN DAYS(EVENT_DT) - DAYS(LAG(EVENT_DT) OVER(PARTITION BY ALF_PE, ANTIBX_CATEGORY ORDER BY EVENT_DT)) BETWEEN 21 and 56
+		THEN NULL
+	ELSE EVENT_DT
+END;
+	
+COMMIT;
+
+--Add column for the last event date in the group where prescriptions for same anitbiotic category 21 and 56 days, i.e. repeat prescriptions end date
+
+ALTER TABLE SAILW1169V.VB_REPEAT_ABX_ALL_NOEP
+ADD COLUMN RPT_END_DT DATE
+activate not logged INITIALLY;
+			
+UPDATE SAILW1169V.VB_REPEAT_ABX_ALL_NOEP
+SET RPT_END_DT =
+ CASE WHEN DAYS(LEAD(EVENT_DT) OVER(PARTITION BY ALF_PE, ANTIBX_CATEGORY ORDER BY EVENT_DT)) - DAYS(EVENT_DT) BETWEEN 21 and 56
+		THEN NULL
+	ELSE EVENT_DT
+END;
+
+COMMIT;
+
+-----------------------------------------------------------------------------------------------------------------------
+--create table with at least 2 prescriptions in sequence
+
+CREATE TABLE SAILW1169V.VB_REPEAT_ABX_PRE1_COH3
+AS (SELECT * FROM SAILW1169V.VB_REPEAT_ABX_ALL_NOEP)
+WITH NO DATA;
+
+INSERT INTO SAILW1169V.VB_REPEAT_ABX_PRE1_COH3
+SELECT * FROM SAILW1169V.VB_REPEAT_ABX_ALL_NOEP;
+
+--delete from table where there is no repeat.  Ensure delete after running start and end dates so that acute/more frequent prescriptions are incorporated
+--into the check and breaks in pAbx are suitably accounted for
+
+DELETE FROM SAILW1169V.VB_REPEAT_ABX_PRE1_COH3
+	WHERE RPT_GRP IS NULL;
+
+--Add GRP column to assign a unique ID to each repeat prescription grouping
+
+ALTER TABLE SAILW1169V.VB_REPEAT_ABX_PRE1_COH3
+ADD COLUMN RPT_ID INTEGER
+activate not logged INITIALLY;
+
+UPDATE SAILW1169V.VB_REPEAT_ABX_PRE1_COH3
+	SET RPT_ID = COUNT(RPT_STR_DT) OVER (ORDER BY ALF_PE, ANTIBX_CATEGORY, EVENT_DT);
+		
+COMMIT;
+
+--Add group start date assigning the same start date to all events within the repeat grouping
+
+ALTER TABLE SAILW1169V.VB_REPEAT_ABX_PRE1_COH3
+ADD COLUMN GRP_STR DATE
+activate not logged INITIALLY;
+
+UPDATE SAILW1169V.VB_REPEAT_ABX_PRE1_COH3
+SET GRP_STR = FIRST_VALUE(RPT_STR_DT) OVER (PARTITION BY RPT_ID ORDER BY EVENT_DT);
+
+COMMIT;
+
+--Add group end date assigning the same end date to all events within the repeat grouping
+
+ALTER TABLE SAILW1169V.VB_REPEAT_ABX_PRE1_COH3
+ADD COLUMN GRP_END DATE
+activate not logged INITIALLY;
+
+UPDATE SAILW1169V.VB_REPEAT_ABX_PRE1_COH3
+SET GRP_END = FIRST_VALUE(RPT_END_DT) OVER (PARTITION BY RPT_ID ORDER BY EVENT_DT DESC);
+
+COMMIT;
+
+-------------------------------------------------------------------------------------------
+
+CREATE TABLE SAILW1169V.VB_COHORT3_ALL_RPT_ABX
+(ALF_PE INTEGER,
+ANTIBX_CATEGORY VARCHAR(20),
+RPT_ID INTEGER,
+GRP_STR DATE,
+GRP_END DATE,
+EVENT_DT DATE,
+DOSE VARCHAR(10),
+LAG_EVENT_DT DATE,
+LAG_DOSE VARCHAR(10),
+LAG2_EVENT_DT DATE,
+LAG2_DOSE VARCHAR(10));
+
+alter table SAILW1169V.VB_COHORT3_ALL_RPT_ABX activate not logged INITIALLY;
+
+INSERT INTO SAILW1169V.VB_COHORT3_ALL_RPT_ABX
+(ALF_PE,
+ANTIBX_CATEGORY,
+RPT_ID,
+GRP_STR,
+GRP_END,
+EVENT_DT,
+DOSE,
+LAG_EVENT_DT,
+LAG_DOSE,
+LAG2_EVENT_DT,
+LAG2_DOSE)
+SELECT DISTINCT ALF_PE,
+				ANTIBX_CATEGORY,
+				RPT_ID,
+				GRP_STR,
+				GRP_END,
+				EVENT_DT,
+				DOSE,
+				LAG(EVENT_DT) OVER(PARTITION BY RPT_ID ORDER BY EVENT_DT),
+				LAG(DOSE) OVER(PARTITION BY RPT_ID ORDER BY EVENT_DT),
+				LAG(EVENT_DT,2) OVER(PARTITION BY RPT_ID ORDER BY EVENT_DT),
+				LAG(DOSE,2) OVER(PARTITION BY RPT_ID ORDER BY EVENT_DT)
+		FROM SAILW1169V.VB_REPEAT_ABX_PRE1_COH3
+ORDER BY ALF_PE,
+		ANTIBX_CATEGORY,
+		GRP_STR;
+	
+COMMIT;
+
+ALTER TABLE SAILW1169V.VB_COHORT3_ALL_RPT_ABX
+ADD COLUMN NUM_OF_SCRIPTS INTEGER
+ADD COLUMN EVENT_IN_GRP INTEGER
+;
+
+UPDATE SAILW1169V.VB_COHORT3_ALL_RPT_ABX
+SET NUM_OF_SCRIPTS = COUNT(EVENT_DT) OVER(PARTITION BY RPT_ID);
+
+UPDATE SAILW1169V.VB_COHORT3_ALL_RPT_ABX
+SET EVENT_IN_GRP = COUNT(EVENT_DT) OVER(PARTITION BY RPT_ID ORDER BY EVENT_DT ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
+
+--Add field to identify if the dose has remained the same over the previous 3 prescriptions
+
+ALTER TABLE SAILW1169V.VB_COHORT3_ALL_RPT_ABX
+ADD COLUMN DOSE_CONSISTENCY VARCHAR(10);
+
+UPDATE SAILW1169V.VB_COHORT3_ALL_RPT_ABX
+	SET DOSE_CONSISTENCY = 
+		CASE WHEN (DOSE = LAG_DOSE
+				AND LAG_DOSE = LAG2_DOSE)
+					THEN 'CONSISTENT'
+		WHEN (DOSE <> LAG_DOSE
+				OR LAG_DOSE <> LAG2_DOSE)
+					THEN 'CHANGED'
+			ELSE NULL
+		END;
+
+--------------------------------------------------------------------------------
+--Create repeat abx table selecting only the 3rd event in group of 3+ prescriptions
+--3rd event used as the start date for pAbx
+
+CREATE TABLE SAILW1169V.VB_COHORT3_PABX_STR AS
+(SELECT * FROM SAILW1169V.VB_COHORT3_ALL_RPT_ABX)
+WITH NO DATA;
+
+alter table SAILW1169V.VB_COHORT3_PABX_STR activate not logged INITIALLY;
+
+INSERT INTO SAILW1169V.VB_COHORT3_PABX_STR
+SELECT * 
+FROM SAILW1169V.VB_COHORT3_ALL_RPT_ABX
+WHERE EVENT_IN_GRP = 3
+ORDER BY ALF_PE,
+		ANTIBX_CATEGORY,
+		GRP_STR;
+	
+COMMIT;
+
+--------------------------------------------------------------------------------------------------
+
+--WHERE multiple with less than 21 days between start then THEN DELETE one ROW, SET pabx_type TO multi and select PABX_START to the date of the first 
+
+--lookback to end of previous antibiotic type pAbx group end. If time between previous group end and current group start between 21 and 56 days then set first pAbx
+--date to the first date
+
+INSERT INTO SAILW1169V.VB_REPEAT_ABX_RUTI_FIN
+(ALF_PE,
+ANTIBX_CATEGORY,
+PABX_CAT,
+DOSE,
+DOSE_CONSISTENCY,
+UNITS,
+RUTI_GRP_END)
+SELECT ALF_PE,
+		'Multi',
+		PABX_CAT,
+		'N/A',
+		'N/A',
+		'N/A',
+		max(RUTI_GRP_END) AS RUTI_GRP_END
+FROM (SELECT abx.ALF_PE,
+		abx.ANTIBX_CATEGORY,
+		abx.RPT_ID,
+		LAG_END,
+		abx.GRP_STR,
+		abx.GRP_END,
+		coh.DIAG_DATE,
+		abx.RUTI_GRP_END,
+		abx.NUM_OF_SCRIPTS,
+		LAG_NUM_SCRIPTS,
+		mqo.LAG_ABX,
+		LAG_RPT_ID,
+		LAG_STR,
+		DAYS(abx.GRP_STR) - DAYS(mqo.LAG_END) AS DAYS_BETWEEN_SCRIPTS,
+		DAYS(coh.DIAG_DATE) - DAYS(mqo.RUTI_GRP_END) AS DAYS_BEFORE_DIAG,
+		abx.PABX_CAT
+	FROM SAILW1169V.VB_REPEAT_ABX_RUTI AS abx
+		LEFT JOIN (SELECT *,
+				LAG(ALF_PE) OVER (ORDER BY ALF_PE, GRP_STR) AS LAG_ALF,
+				LAG(ANTIBX_CATEGORY) OVER (ORDER BY ALF_PE, GRP_STR) AS LAG_ABX,
+				LAG(RPT_ID) OVER (ORDER BY ALF_PE, GRP_STR) AS LAG_RPT_ID,
+				LAG(GRP_STR) OVER (ORDER BY ALF_PE, GRP_STR) AS LAG_STR,
+				LAG(GRP_END) OVER (ORDER BY ALF_PE, GRP_STR) AS LAG_END,
+				LAG(NUM_OF_SCRIPTS) OVER (ORDER BY ALF_PE, GRP_STR) AS LAG_NUM_SCRIPTS
+					FROM SAILW1169V.VB_REPEAT_ABX_RUTI) AS mqo
+				ON abx.RPT_ID = mqo.RPT_ID
+		LEFT JOIN SAILW1169V.VB_COHORT1 AS coh
+				ON abx.ALF_PE = coh.ALF_PE
+		WHERE abx.ALF_PE = mqo.LAG_ALF
+		AND abx.ANTIBX_CATEGORY <> mqo.LAG_ABX
+		AND DAYS(mqo.GRP_STR) - DAYS(mqo.LAG_END) < 21
+		AND abx.NUM_OF_SCRIPTS >= 3
+		AND LAG_NUM_SCRIPTS >= 3
+		AND abx.PABX_CAT IS NOT NULL
+	ORDER BY ALF_PE,
+			GRP_STR)
+		GROUP BY ALF_PE, PABX_CAT;
+		
+------------------------------------------------------------------------------------------------------------------------------
+--ALTERNATING PABX
+------------------------------------------------------------------------------------------------------------------------------
+--Identify people on rotating prophylactic antibiotic treatment at baseline
+--This is used to identify where the pAbx does start within the study or if it is part of an alternating pAbx series which started prior to study start
+--To be included an individual must:
+--Have prescriptions for at least 2 different types of antibiotic with a gap of between 21 and 56 days between prescriptions for different antibiotic types
+--Have between 3 and 12 prescriptions for both the latest and previous antibiotic type, with a period of 21 to 56 days between each prescription
+--Start PAbx within the study period 2010 to 2020
+	
+CREATE TABLE SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE AS
+(SELECT abx.ALF_PE,
+		abx.ANTIBX_CATEGORY,
+		abx.RPT_ID,
+		pabx.EVENT_DT AS PABX_STR,
+		abx.GRP_STR,
+		abx.GRP_END
+	FROM SAILW1169V.VB_COHORT3_ALL_RPT_ABX AS abx,
+			SAILW1169V.VB_COHORT3_PABX_STR AS pabx)
+WITH NO DATA;
+
+INSERT INTO SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE
+SELECT DISTINCT abx.ALF_PE,
+		abx.ANTIBX_CATEGORY,
+		abx.RPT_ID,
+		pabx.EVENT_DT,
+		abx.GRP_STR,
+		abx.GRP_END
+	FROM SAILW1169V.VB_COHORT3_ALL_RPT_ABX AS abx
+		LEFT JOIN SAILW1169V.VB_COHORT3_PABX_STR AS pabx
+			ON abx.RPT_ID = pabx.RPT_ID
+	WHERE abx.NUM_OF_SCRIPTS >= 3;
+
+--Add column for the first event date in the group where prescriptions for same antibiotic category 21 and 56 days, i.e. repeat prescriptions start date
+--Where two repeat groups are for the same antibiotic type with between 21 and 56 days between then repeat series has been broken by a more frequent prescription
+--To prevent errors in merging these into a continuous series the alternating start date must have a different abx category to previous
+
+ALTER TABLE SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE
+ADD COLUMN ALT_STR_DT DATE
+activate not logged INITIALLY;
+			
+UPDATE SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE
+SET ALT_STR_DT =
+ CASE WHEN DAYS(GRP_STR) - DAYS(LAG(GRP_END) OVER(PARTITION BY ALF_PE ORDER BY GRP_STR)) BETWEEN 21 and 56
+ 		AND ANTIBX_CATEGORY <> LAG(ANTIBX_CATEGORY) OVER(PARTITION BY ALF_PE ORDER BY GRP_STR)
+		THEN NULL
+	ELSE GRP_STR
+END;
+	
+COMMIT;
+
+--Add column for the last event date in the group where prescriptions for same anitbiotic category 21 and 56 days, i.e. repeat prescriptions end date
+
+ALTER TABLE SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE
+ADD COLUMN ALT_END_DT DATE
+activate not logged INITIALLY;
+			
+UPDATE SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE
+SET ALT_END_DT =
+ CASE WHEN DAYS(LEAD(GRP_STR) OVER(PARTITION BY ALF_PE ORDER BY GRP_STR)) - DAYS(GRP_END) BETWEEN 21 and 56
+ 		AND ANTIBX_CATEGORY <> LEAD(ANTIBX_CATEGORY) OVER(PARTITION BY ALF_PE ORDER BY GRP_STR)
+		THEN NULL
+	ELSE GRP_END
+END;
+	
+COMMIT;
+
+----------------------------------------------------------------------------------------------------------------------------------
+
+--Add flag for multiple pabx i.e different abx types at the same time
+
+ALTER TABLE SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE
+ADD COLUMN MULTI_PABX_FLAG VARCHAR(5)
+activate not logged INITIALLY;
+			
+UPDATE SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE
+SET MULTI_PABX_FLAG =
+ CASE WHEN DAYS(GRP_STR) - DAYS(LAG(GRP_END) OVER(PARTITION BY ALF_PE ORDER BY GRP_STR)) < 21 
+ AND ANTIBX_CATEGORY <> LAG(ANTIBX_CATEGORY) OVER(PARTITION BY ALF_PE ORDER BY GRP_STR)
+		THEN 'TRUE'
+	WHEN DAYS(LEAD(GRP_STR) OVER(PARTITION BY ALF_PE ORDER BY GRP_STR)) - DAYS(GRP_END)  < 21 
+ AND ANTIBX_CATEGORY <> LEAD(ANTIBX_CATEGORY) OVER(PARTITION BY ALF_PE ORDER BY GRP_STR)
+		THEN 'TRUE'
+	ELSE 'FALSE'
+END;
+	
+COMMIT;
+
+--Add flag for multiple pabx at the time of pabx start
+
+ALTER TABLE SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE
+ADD COLUMN MULTI_PABX_AT_PBX_STR VARCHAR(5)
+activate not logged INITIALLY;
+			
+UPDATE SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE
+SET MULTI_PABX_AT_PBX_STR =
+ CASE WHEN DAYS(PABX_STR) - DAYS(LAG(PABX_STR) OVER(PARTITION BY ALF_PE ORDER BY PABX_STR)) < 21 
+ AND ANTIBX_CATEGORY <> LAG(ANTIBX_CATEGORY) OVER(PARTITION BY ALF_PE ORDER BY PABX_STR)
+		THEN 'TRUE'
+	WHEN DAYS(LEAD(PABX_STR) OVER(PARTITION BY ALF_PE ORDER BY PABX_STR)) - DAYS(PABX_STR)  < 21 
+ AND ANTIBX_CATEGORY <> LEAD(ANTIBX_CATEGORY) OVER(PARTITION BY ALF_PE ORDER BY PABX_STR)
+		THEN 'TRUE'
+	ELSE 'FALSE'
+END;
+	
+COMMIT;
+
+------------------------------------------------------------------------------------------------------------------
+--Add row number
+
+ALTER TABLE SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE
+ADD COLUMN ROW_NUM INTEGER
+activate not logged INITIALLY;
+
+UPDATE SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE
+SET ROW_NUM = ROW_NUMBER()OVER(ORDER BY ALF_PE,GRP_STR)
+;
+
+------------------------------------------------------------------------------------------------------------------
+--add alternating pAbx ID to ensure all Alt_Str_Dts and Alt_End_Dts match
+--START DATES
+
+CREATE TABLE SAILW1169V.VB_COHORT3_ALT_STR
+(
+ALF_PE INTEGER,
+ROW_NUM INTEGER,
+ALT_STR_DT DATE,
+ALT_ID INTEGER,
+ALT_STR_DT_COMB DATE,
+ALT_ABX_TYPE VARCHAR(15));
+
+INSERT INTO SAILW1169V.VB_COHORT3_ALT_STR
+(SELECT ALF_PE,
+		ROW_NUM,
+		ALT_STR_DT,
+		ALT_ID,
+		FIRST_VALUE(ALT_STR_DT) OVER(PARTITION BY ALT_ID ORDER BY ROW_NUM),
+		CASE WHEN MULTI_PABX_AT_PBX_STR = 'TRUE' THEN 'Multi'
+			ELSE FIRST_VALUE(ANTIBX_CATEGORY) OVER(PARTITION BY ALT_ID ORDER BY ROW_NUM)
+				END
+FROM (SELECT ALF_PE,
+			ROW_NUM,
+			ALT_STR_DT,
+			ANTIBX_CATEGORY,
+			MULTI_PABX_AT_PBX_STR,
+			SUM(CASE WHEN ALT_STR_DT IS NULL THEN 0
+										ELSE 1
+										END)
+				OVER(ORDER BY ROW_NUM) AS ALT_ID
+		FROM SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE
+	ORDER BY ALF_PE,
+			RPT_ID) AS mqo);
+		
+--Add alternating flag to identify alternating events
+		
+ALTER TABLE SAILW1169V.VB_COHORT3_ALT_STR
+ADD COLUMN ALT_FLAG VARCHAR(5);
+
+UPDATE SAILW1169V.VB_COHORT3_ALT_STR AS str
+SET ALT_FLAG = 'TRUE'
+WHERE str.ALT_ID IN
+	(SELECT pre.ALT_ID
+		FROM SAILW1169V.VB_COHORT3_ALT_STR AS pre
+		GROUP BY pre.ALT_ID
+		HAVING COUNT(pre.ALT_ID) > 1)
+	;
+
+UPDATE SAILW1169V.VB_COHORT3_ALT_STR
+SET ALT_FLAG = CASE WHEN ALT_FLAG = 'TRUE'
+				THEN ALT_FLAG
+				ELSE 'FALSE'
+			END;
+		
+--Merge into SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE table
+		
+ALTER TABLE SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE
+ADD COLUMN ALT_ID INTEGER
+ADD COLUMN ALT_STR_DT_COMB DATE
+ADD COLUMN ALT_ABX_TYPE VARCHAR(15);
+
+MERGE INTO SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE AS coh
+	USING SAILW1169V.VB_COHORT3_ALT_STR AS str
+		ON coh.ROW_NUM = str.ROW_NUM
+			WHEN MATCHED THEN UPDATE
+				SET coh.ALT_STR_DT_COMB = str.ALT_STR_DT_COMB;
+			
+MERGE INTO SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE AS coh
+	USING SAILW1169V.VB_COHORT3_ALT_STR AS str
+		ON coh.ROW_NUM = str.ROW_NUM
+			WHEN MATCHED THEN UPDATE
+				SET coh.ALT_ABX_TYPE = str.ALT_ABX_TYPE;
+			
+MERGE INTO SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE AS coh
+	USING SAILW1169V.VB_COHORT3_ALT_STR AS str
+		ON coh.ROW_NUM = str.ROW_NUM
+			WHEN MATCHED THEN UPDATE
+				SET coh.ALT_ID = str.ALT_ID;
+			
+UPDATE SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE AS coh
+SET coh.MULTI_PABX_AT_PBX_STR = 'TRUE'
+WHERE coh.ALT_ID IN (SELECT ALT_ID FROM SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE
+WHERE MULTI_PABX_AT_PBX_STR = 'TRUE');
+			
+UPDATE SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE AS coh
+SET coh.ALT_ABX_TYPE = 'Multi'
+WHERE coh.ALT_ID IN
+	(SELECT ALT_ID FROM
+	(
+	SELECT pre.GRP_STR,
+			pre.ALT_ID,
+			COUNT(pre.ALT_ID)
+		FROM SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE AS pre
+		GROUP BY pre.GRP_STR,
+				pre.ALT_ID
+		HAVING COUNT(pre.ALT_ID) > 1))
+	;
+
+UPDATE SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE AS coh
+SET coh.ALT_ABX_TYPE = 'Multi'
+WHERE coh.MULTI_PABX_AT_PBX_STR = 'TRUE';
+
+-----------------------------------------------------------------------------------
+--Add pAbx start date as 3rd event in the repeat sequence.
+--Where pAbx is alternating then this is the 3rd event in the first pAbx sequence within the alternating group
+
+--Add alternating ID to pabx table to match against
+
+ALTER TABLE SAILW1169V.VB_COHORT3_PABX_STR
+ADD COLUMN ALT_ID INTEGER;
+
+MERGE INTO SAILW1169V.VB_COHORT3_PABX_STR AS pabx
+USING SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE AS coh
+ON pabx.RPT_ID = coh.RPT_ID
+WHEN MATCHED THEN
+UPDATE
+SET pabx.ALT_ID = coh.ALT_ID;
+
+--Add minimum Event date (i.e. pabx start date) for Alternating pAbx
+
+ALTER TABLE SAILW1169V.VB_COHORT3_PABX_STR
+ADD COLUMN ALT_PABX_STR DATE;
+
+UPDATE SAILW1169V.VB_COHORT3_PABX_STR AS pabx
+SET ALT_PABX_STR = MIN(EVENT_DT) OVER(PARTITION BY ALT_ID);
+
+------------------------------------------------------------------------------------------------------------------
+--END DATES	
+			
+CREATE TABLE SAILW1169V.VB_COHORT3_ALT_END
+(ROW_NUM INTEGER,
+ALT_END_DT DATE,
+ALT_ID INTEGER,
+ALT_END_DT_COMB DATE);
+
+INSERT INTO SAILW1169V.VB_COHORT3_ALT_END
+(SELECT ROW_NUM,
+		ALT_END_DT,
+		ALT_ID,
+		FIRST_VALUE(ALT_END_DT) OVER(PARTITION BY ALT_ID ORDER BY ROW_NUM DESC)
+FROM (SELECT ROW_NUM,
+			ALT_END_DT,
+			SUM(CASE WHEN ALT_END_DT IS NULL THEN 0
+										ELSE 1
+										END)
+				OVER(ORDER BY ROW_NUM DESC) AS ALT_ID
+		FROM SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE
+	ORDER BY ALF_PE,
+			RPT_ID) AS mqo);
+					
+ALTER TABLE SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE
+ADD COLUMN ALT_END_DT_COMB DATE;
+
+MERGE INTO SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE AS coh
+	USING SAILW1169V.VB_COHORT3_ALT_END AS ed
+		ON coh.ROW_NUM = ed.ROW_NUM
+			WHEN MATCHED THEN UPDATE
+				SET coh.ALT_END_DT_COMB = ed.ALT_END_DT_COMB;
+		
+-----------------------------------------------------------------------------------
+--Add pAbx start date as 3rd event in the repeat sequence.
+--Where pAbx is alternating then this is the 3rd event in the first pAbx sequence within the alternating group
+			
+CREATE TABLE SAILW1169V.VB_ALTERNATING_PABX_COH3 AS
+(SELECT ALF_PE,
+		ALT_ID,
+		ALT_ABX_TYPE,
+		ALT_STR_DT
+	FROM SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE)
+WITH NO DATA;
+			
+INSERT INTO SAILW1169V.VB_ALTERNATING_PABX_COH3
+SELECT DISTINCT ALF_PE,
+		ALT_ID,
+		ALT_ABX_TYPE,
+		ALT_STR_DT
+	FROM SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE;
+
+ALTER TABLE SAILW1169V.VB_ALTERNATING_PABX_COH3
+ADD COLUMN PABX_STR DATE;
+
+MERGE INTO SAILW1169V.VB_ALTERNATING_PABX_COH3 AS coh
+	USING (SELECT DISTINCT ALT_ID, ALT_PABX_STR
+	FROM SAILW1169V.VB_COHORT3_PABX_STR) AS pabx
+		ON coh.ALT_ID = pabx.ALT_ID
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.PABX_STR = pabx.ALT_PABX_STR;
+		
+--delete duplicate rows where alt_str_dt is null
+			
+DELETE FROM SAILW1169V.VB_ALTERNATING_PABX_COH3 WHERE ALT_STR_DT IS NULL;
+			
+-------------------------------------------------------------------------------------------------
+--Add pAbx dose and units
+
+ALTER TABLE SAILW1169V.VB_REPEAT_ABX_PRE1_COH3
+ADD COLUMN ALT_ID INTEGER
+ADD COLUMN DOSE_CONSISTENCY VARCHAR(10);
+
+MERGE INTO SAILW1169V.VB_REPEAT_ABX_PRE1_COH3 AS abx
+USING SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE AS alt
+ON abx.RPT_ID = alt.RPT_ID
+WHEN MATCHED THEN UPDATE
+SET abx.ALT_ID = alt.ALT_ID;
+
+MERGE INTO SAILW1169V.VB_REPEAT_ABX_PRE1_COH3 AS pre
+USING SAILW1169V.VB_COHORT3_ALL_RPT_ABX AS dose
+ON pre.ALF_PE = dose.ALF_PE
+AND pre.EVENT_DT = dose.EVENT_DT
+AND pre.RPT_ID = dose.RPT_ID
+WHEN MATCHED THEN UPDATE
+SET pre.DOSE_CONSISTENCY = dose.DOSE_CONSISTENCY;
+
+--Create reduced dose table
+
+CREATE TABLE SAILW1169V.VB_ABX_DOSE_COH3 AS
+(SELECT ALF_PE,
+		ANTIBX_CATEGORY,
+		EVENT_DT,
+		DOSE,
+		UNITS,
+		ALT_ID,
+		DOSE_CONSISTENCY
+FROM SAILW1169V.VB_REPEAT_ABX_PRE1_COH3)
+WITH NO DATA;
+
+--Insert where multiple Abx types have matching pAbx types
+
+INSERT INTO SAILW1169V.VB_ABX_DOSE_COH3
+(		ALF_PE,
+		ANTIBX_CATEGORY,
+		EVENT_DT,
+		DOSE,
+		UNITS,
+		ALT_ID,
+		DOSE_CONSISTENCY)
+	SELECT ALF_PE,
+			'Multi',
+			EVENT_DT,
+			'Multi',
+			'Multi',
+			ALT_ID,
+			'N/A'
+		FROM (SELECT ALF_PE, ALT_ID, EVENT_DT, COUNT(ALF_PE)
+				FROM SAILW1169V.VB_REPEAT_ABX_PRE1_COH3
+					WHERE ALT_ID IS NOT NULL
+					GROUP BY ALF_PE, ALT_ID, EVENT_DT
+					HAVING COUNT(ALF_PE) > 1);
+				
+--Insert dose and units for all other cases
+
+INSERT INTO SAILW1169V.VB_ABX_DOSE_COH3
+(		ALF_PE,
+		ANTIBX_CATEGORY,
+		EVENT_DT,
+		DOSE,
+		UNITS,
+		ALT_ID,
+		DOSE_CONSISTENCY)
+	SELECT ALF_PE,
+			ANTIBX_CATEGORY,
+			EVENT_DT,
+			DOSE,
+			UNITS,
+			ALT_ID,
+			DOSE_CONSISTENCY
+		FROM SAILW1169V.VB_REPEAT_ABX_PRE1_COH3
+			WHERE ALT_ID IS NOT NULL
+			AND ALT_ID NOT IN (SELECT ALT_ID FROM SAILW1169V.VB_ABX_DOSE_COH3);
+	
+--Add dose to main cohort table
+
+ALTER TABLE SAILW1169V.VB_ALTERNATING_PABX_COH3
+ADD COLUMN DOSE VARCHAR(10)
+ADD COLUMN UNITS VARCHAR(10)
+ADD COLUMN DOSE_CONSISTENCY VARCHAR(10);
+			
+MERGE INTO SAILW1169V.VB_ALTERNATING_PABX_COH3 AS alt
+USING SAILW1169V.VB_ABX_DOSE_COH3 AS dose
+ON alt.ALT_ID = dose.ALT_ID
+AND alt.PABX_STR = dose.EVENT_DT
+WHEN MATCHED THEN UPDATE
+SET alt.DOSE = dose.DOSE;
+
+UPDATE SAILW1169V.VB_ALTERNATING_PABX_COH3
+SET DOSE = CASE WHEN ALT_ABX_TYPE = 'Multi'
+				THEN 'N/A'
+				ELSE DOSE
+			END;
+
+MERGE INTO SAILW1169V.VB_ALTERNATING_PABX_COH3 AS alt
+USING SAILW1169V.VB_ABX_DOSE_COH3 AS dose
+ON alt.ALT_ID = dose.ALT_ID
+AND alt.PABX_STR = dose.EVENT_DT
+WHEN MATCHED THEN UPDATE
+SET alt.UNITS = dose.UNITS;
+
+UPDATE SAILW1169V.VB_ALTERNATING_PABX_COH3
+SET UNITS = CASE WHEN ALT_ABX_TYPE = 'Multi'
+				THEN 'N/A'
+				ELSE UNITS
+			END;
+
+MERGE INTO SAILW1169V.VB_ALTERNATING_PABX_COH3 AS alt
+USING SAILW1169V.VB_ABX_DOSE_COH3 AS dose
+ON alt.ALT_ID = dose.ALT_ID
+AND alt.PABX_STR = dose.EVENT_DT
+WHEN MATCHED THEN UPDATE
+SET alt.DOSE_CONSISTENCY = dose.DOSE_CONSISTENCY;
+
+UPDATE SAILW1169V.VB_ALTERNATING_PABX_COH3
+SET DOSE_CONSISTENCY = CASE WHEN ALT_ABX_TYPE = 'Multi'
+				THEN 'N/A'
+				ELSE DOSE_CONSISTENCY
+			END;
+
+-------------------------------------------------------------------------------------------------
+--Create pAbx start date table containing first pAbx start within the study period where there is 18 months+ GP registration prior to pAbx start	
+
+CREATE TABLE SAILW1169V.VB_PABX_COH3 AS
+(SELECT coh.ALF_PE,
+		coh.PABX_STR,
+		coh.ALT_STR_DT AS FIRST_ABX,
+		coh.ALT_ABX_TYPE,
+		coh.DOSE,
+		coh.UNITS,
+		coh.DOSE_CONSISTENCY,
+		coh.ALT_STR_DT AS GP_STR_DT,
+		coh.ALT_STR_DT AS GP_END_DT,
+		coh.ALT_ID AS AGE_MET,
+		coh.ALT_ID AS STUDY_PERIOD_FG,
+		coh.ALT_ID AS IN_GP_FG,
+		coh.ALT_ID AS GP_18_MONTHS,
+		coh.ALT_ID AS MONTHS_GP_TO_PABX,
+		wdsd.WOB,
+		coh.ALF_PE AS BIRTH_YEAR
+FROM SAILW1169V.VB_ALTERNATING_PABX_COH3 AS coh,
+	SAIL1169V.WDSD_AR_PERS_20210704 AS wdsd)
+WITH NO DATA;
+
+INSERT INTO SAILW1169V.VB_PABX_COH3
+(SELECT DISTINCT coh.ALF_PE,
+				coh.PABX_STR,
+				coh.ALT_STR_DT,
+				coh.ALT_ABX_TYPE,
+				coh.DOSE,
+				coh.UNITS,
+				coh.DOSE_CONSISTENCY,
+				dic.START_DATE,
+				dic.END_DATE,
+				CASE WHEN YEAR(coh.PABX_STR - wdsd.WOB) >= 18
+					THEN 1
+						ELSE 0
+				END,
+				CASE WHEN YEAR(coh.PABX_STR) BETWEEN '2010' AND '2020'
+					THEN 1
+						ELSE 0
+				END,
+				CASE WHEN coh.PABX_STR BETWEEN dic.START_DATE AND dic.END_DATE
+					THEN 1
+						ELSE 0
+				END,
+				CASE WHEN MONTHS_BETWEEN(coh.PABX_STR,dic.START_DATE) >= 18
+					THEN 1
+						ELSE 0
+				END,
+				FLOOR(MONTHS_BETWEEN(coh.PABX_STR,dic.START_DATE)),
+				wdsd.WOB,
+				YEAR(wdsd.WOB)
+FROM SAILW1169V.VB_ALTERNATING_PABX_COH3 AS coh
+LEFT JOIN SAIL1169V.WDSD_AR_PERS_20210704 AS wdsd
+ON coh.ALF_PE = wdsd.ALF_PE
+LEFT JOIN SAILW1169V.VB_WLGP_DAYS_IN_COHORT AS dic
+ON coh.ALF_PE = dic.ALF_PE 
+WHERE coh.ALT_STR_DT IS NOT NULL);
+
+-----------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
+
+-- remove pregnancy records and catheter records
+
+/* update abx table with pregnancy
+Link all  events to gp event to identify any events with pregnancy read codes
+Identify first event date for any episode with a recorded pregnancy read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_PREG
+			(ALF_PE INTEGER, 
+			PABX_STR DATE,
+			PREG_DT DATE)
+	ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_PREG
+							(ALF_PE,
+							PABX_STR,
+							PREG_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('2721.','2724.','2745.','2754.','2769.','2781.','2792.','5391.','9381.','9394.','9517.','9591.',
+												'9594.','44451','13H7.','13H8.','13Hd.','13Iv0','13S..','13SZ.','14Y0.','14Y1.','14Y2.','14Y3.',
+												'14Y4.','14Y5.','14Y6.','1514.','2684.','271..','2711.','2712.','2713.','2714.','2715.','2716.',
+												'2717.','2718.','2719.','271A.','271B.','271Z.','272..','2722.','2725.','2726.','272Z.','273..',
+												'2731.','2732.','2733.','2734.','2735.','2736.','273Z.','274..','2741.','2742.','2743.','2744.',
+												'274Z.','275..','2752.','2753.','2755.','275Z.','276..','2761.','2762.','2763.','2764.','2765.',
+												'2766.','2767.','2768.','276Z.','2782.','2793.','2794.','2796.','27A..','27A1.','27A2.','27AZ.',
+												'27B..','27D..','3188.','42YG.','444..','4441.','4442.','4443.','44430','44431','4444.','4445.',
+												'44450','444Z.','4453.','4654.','4H...','4H1..','4H11.','4H12.','4H13.','4H1Z.','4H2..','4H22.',
+												'4H23.','4H2Z.','4H3..','4H31.','4H4..','4H41.','4H43.','4H45.','4H4Z.','4H5..','4H51.','4H53.',
+												'4H5Z.','4H6..','4H62.','4H7..','4H71.','4H72.','4H7Z.','4HZ..','4JL3.','4Q3N.','539..','5392.',
+												'539Z.','584..','5841.','5842.','5843.','5844.','5845.','5846.','5847.','5848.','5849.','584A.',
+												'584B.','584C.','584D.','584G.','584G0','584Z.','58582','615C.','6166.','6174.','62...','62...',
+												'621..','6211.','6212.','6213.','6214.','6215.','6216.','6217.','6218.','621A.','621B.','621C.',
+												'621Z.','622..','6221.','6222.','6223.','6224.','622Z.','623..','6231.','6233.','6236.','6237.',
+												'623Z.','624..','6241.','624Z.','625..','6251.','6252.','6253.','6254.','625Z.','626..','627..',
+												'628..','6281.','6282.','6283.','6284.','6285.','628Z.','6291.','6292.','6293.','629Z.','62A..',
+												'62a..','62A1.','62A2.','62A3.','62A4.','62AZ.','62B..','62b..','62B1.','62B2.','62B3.','62B4.',
+												'62B5.','62B6.','62B7.','62B8.','62BZ.','62C..','62c..','62c0.','62C1.','62C2.','62CZ.','62E..',
+												'62E1.','62E2.','62E3.','62E4.','62EZ.','62F..','62F1.','62F2.','62F3.','62F4.','62F5.','62F6.',
+												'62F7.','62F8.','62F9.','62FZ.','62G..','62G1.','62G2.','62G3.','62G4.','62G5.','62G6.','62G7.',
+												'62G8.','62G9.','62GA.','62GB.','62GC.','62GD.','62GE.','62GZ.','62H..','62H1.','62H2.','62H3.',
+												'62H4.','62H5.','62H6.','62HZ.','62I..','62K..','62K1.','62K2.','62KZ.','62L..','62L1.','62L2.',
+												'62LZ.','62M..','62M1.','62M2.','62MZ.','62N..','62N1.','62N2.','62N3.','62N4.','62N5.','62N6.',
+												'62N7.','62N8.','62N9.','62NA.','62NB.','62NC.','62ND.','62NE.','62NF.','62NG.','62NH.','62NJ.',
+												'62NK.','62NL.','62NZ.','62O..','62O1.','62O2.','62O3.','62O4.','62O5.','62O6.','62O7.','62O8.',
+												'62OZ.','62U..','62U0.','62U1.','62U2.','62U3.','62U4.','62U5.','62U6.','62U7.','62U8.','62U9.',
+												'62UA.','62Uz.','62V..','62V0.','62W..','62X..','62X0.','62X1.','62X2.','62X3.','62X4.','62X5.',
+												'62X6.','62Y..','63...','631..','6311.','6312.','6313.','6314.','6315.','6316.','632..','6321.',
+												'6322.','6323.','632Z.','633..','6331.','6333.','6336.','633a.','633Z.','634..','6341.','6342.',
+												'6343.','6344.','6345.','6346.','6348.','635..','6351.','6352.','6353.','6354.','6355.','6356.',
+												'6357.','6358.','6359.','635A.','635B.','635Z.','636..','6361.','6362.','6363.','6364.','6365.',
+												'6366.','6367.','6368.','6369.','636A.','636B.','636C.','636D.','636E.','636F.','636Z.','637..',
+												'6371.','6372.','6373.','6374.','6375.','6376.','6377.','6378.','637Z.','638..','6381.','6384.',
+												'6385.','6386.','638Z.','639..','6391.','6392.','6393.','6394.','6395.','6396.','6397.','6398.',
+												'6399.','639A.','639B.','639Z.','63A..','63A1.','63A2.','63A3.','63A4.','63A5.','63A6.','63A7.',
+												'63A8.','63A9.','63AA.','63AB.','63AZ.','63B..','63B1.','63B2.','63B3.','63B4.','63B6.','63B7.',
+												'63B8.','63B9.','63BA.','63BB.','63BZ.','63D1.','63D2.','63D3.','63D4.','63D6.','63E..','63E1.',
+												'63E2.','63E3.','64B..','64B2.','64B3.','64B4.','64B5.','64BZ.','65QE.','65QF.','65QG.','65QH.',
+												'66AX.','679E.','67A2.','67A3.','67A4.','67A5.','67A7.','67AB.','67AE.','67AH.','67AJ.','67B..',
+												'67It.','67Iu.','68b..','68b0.','68b1.','68b2.','68b3.','68b4.','68b5.','68b6.','68b7.','68b9.',
+												'68bA.','6B22.','7D100','7F...','7F0..','7F00.','7F000','7F00y','7F01.','7F010','7F011','7F01z',
+												'7F03.','7F030','7F031','7F032','7F033','7F034','7F036','7F03y','7F03z','7F04.','7F041','7F042',
+												'7F043','7F04z','7F05.','7F050','7F051','7F052','7F053','7F05z','7F06.','7F060','7F061','7F062',
+												'7F063','7F064','7F06y','7F06z','7F07.','7F070','7F072','7F07y','7F07z','7F08.','7F080','7F081',
+												'7F082','7F08z','7F09y','7F0y.','7F0z.','7F1..','7F10.','7F100','7F101','7F10z','7F11.','7F110',
+												'7F111','7F112','7F11y','7F11z','7F12.','7F120','7F121','7F12y','7F12z','7F13.','7F130','7F131',
+												'7F132','7F133','7F13y','7F13z','7F14.','7F141','7F14y','7F14z','7F15.','7F150','7F151','7F15y',
+												'7F15z','7F16.','7F160','7F161','7F162','7F163','7F164','7F165','7F166','7F167','7F169','7F16y',
+												'7F16z','7F17.','7F171','7F172','7F173','7F17y','7F17z','7F18.','7F180','7F18y','7F18z','7F19.',
+												'7F190','7F191','7F19y','7F19z','7F1A.','7F1A0','7F1A2','7F1A3','7F1A4','7F1Ay','7F1Az','7F1B.',
+												'7F1B0','7F1B1','7F1B3','7F1B4','7F1y.','7F1z.','7F2..','7F20.','7F200','7F20y','7F20z','7F21.',
+												'7F210','7F21y','7F21z','7F22.','7F220','7F221','7F222','7F223','7F225','7F227','7F22z','7F23.',
+												'7F230','7F231','7F232','7F233','7F234','7F235','7F23y','7F23z','7F24.','7F240','7F242','7F24y',
+												'7F24z','7F25.','7F250','7F251','7F252','7F25y','7F25z','7F26.','7F260','7F261','7F262','7F26y',
+												'7F26z','7F27.','7F271','7F272','7F273','7F274','7F275','7F27y','7F27z','7F28.','7F280','7F281',
+												'7F28y','7F28z','7F29.','7F290','7F291','7F2A.','7F2A0','7F2A1','7F2A2','7F2Ay','7F2Az','7F2B.',
+												'7F2B1','7F2By','7F2Bz','7F2y.','7F2z.','7Fy..','7Fz..','7L130','7L160','7M0f.','7M0f0','7M0f1',
+												'7M0f2','7M0f3','7M0f4','7M0fy','7M0fz','7M331','7M350','7N611','7N612','7N613','7N614','8B68.',
+												'8B7..','8B74.','8B75.','8CE00','8CEM.','8E96.','8HE7.','8HHf.','8Hki.','8HT9.','8HV6.','8IEc.',
+												'8M5..','939..','9391.','9393.','939Z.','95...','951..','9512.','9513.','9515.','9516.','9518.',
+												'9519.','951A.','951Z.','952..','9521.','9522.','9523.','9524.','9525.','9526.','9529.','952A.',
+												'952Z.','9531.','9532.','9533.','9534.','954..','9541.','9542.','954Z.','955..','957..','95B..',
+												'9bE3.','9kv..','9mK..','9mK0.','9mK1.','9mK2.','9N1N.','9NFV.','9Nif.','9Nk3.','9NkN.','9NV1.',
+												'9OqCF','B911.','Eu32B','Infin','L00..','L000.','L001.','L01..','L010.','L011.','L01z.','L0300',
+												'L1...','L10..','L10y.','L10y0','L10y2','L10yz','L10z.','L10z0','L10z2','L11..','L110.',
+												'L1100','L1101','L1102','L110z','L111.','L1110','L1111','L1112','L111z','L112.','L1120','L1121',
+												'L1122','L1123','L112z','L113.','L1130','L114.','L1141','L114z','L115.','L1151','L115z','L116.',
+												'L11y.','L11y0','L11y1','L11y2','L11yz','L11z.','L11z0','L11z1','L11z2','L11zz','L1201','L1202',
+												'L1203','L1204','L1211','L1213','L1221','L1223','L123.','L1230','L1231','L1232','L1233','L1234',
+												'L1235','L1236','L123z','L124.','L1240','L1241','L1242','L1243','L1244','L1245','L1246','L124z',
+												'L125.','L1250','L1251','L1252','L1253','L1254','L125z','L126.','L1260','L1261','L1262','L1263',
+												'L1264','L1265','L1266','L126z','L127.','L1270','L1271','L1272','L1273','L127z','L129.','L12A.',
+												'L12B.','L12z1','L12z2','L12z3','L13..','L130.','L1300','L1301','L1302','L130z','L131.','L1310',
+												'L1312','L131z','L132.','L1320','L1321','L1322','L132z','L13y.','L13y0','L13y2','L13yz','L13z.',
+												'L13z0','L13z1','L13z2','L13zz','L14..','L140.','L1400','L1401','L1402','L140z','L141.','L1410',
+												'L1411','L141z','L142.','L1420','L1421','L142z','L1430','L14z.','L15..','L150.','L1500','L1501',
+												'L1502','L150z','L15z.','L16..','L160.','L161.','L1610','L1613','L161z','L162.','L1620','L1621',
+												'L164.','L165.','L1652','L1653','L165z','L166.','L1660','L1661','L1663','L1665','L1666','L1667',
+												'L1668','L166z','L167.','L1670','L1671','L1672','L167z','L168.','L1680','L1681','L1683','L168z',
+												'L1692','L1693','L16A.','L16A0','L16A1','L16A3','L16Az','L16B.','L16C.','L16C0','L16C1','L16D.',
+												'L16E.','L16y.','L16y0','L16y1','L16y2','L16y3','L16y5','L16yz','L16z.','L175.','L1751','L1753',
+												'L1763','L177.','L178.','L17y2','L1801','L1803','L1804','L1808','L1809','L1813','L1821','L1822',
+												'L1823','L1824','L1825','L183.','L1831','L1833','L1843','L185.','L1851','L1854','L186.','L1873',
+												'L1881','L1883','L18A0','L18z1','L18z3','L19..','L2...','L20..','L200.','L20z.','L21..','L210.',
+												'L2100','L2101','L2102','L210z','L211.','L2110','L2111','L211z','L212.','L2122','L212z','L213.',
+												'L2130','L2131','L2132','L21y.','L21y2','L21z.','L21z1','L21zz','L22..','L220.','L2200','L2201',
+												'L220z','L221.','L2210','L2211','L221z','L222.','L2220','L2221','L2222','L222z','L223.','L224.',
+												'L2240','L2241','L2242','L224z','L225.','L2250','L2251','L225z','L226.','L2261','L2262','L227.',
+												'L227z','L228.','L229.','L2292','L22y.','L22z.','L22z1','L22zz','L23..','L230.','L2300','L2301',
+												'L2302','L231.','L2311','L231z','L232.','L233.','L233z','L234.','L2341','L235.','L2351','L236.',
+												'L2360','L2361','L2362','L236z','L237.','L2371','L2372','L23y.','L23y1','L23z1','L2400','L2401',
+												'L2402','L2403','L2404','L2410','L2411','L2413','L2421','L243.','L2430','L243z','L2440','L2441',
+												'L2442','L2443','L245.','L2453','L245z','L2460','L2461','L2462','L2463','L2471','L2473','L2483',
+												'L25..','L250.','L2500','L2501','L2502','L2503','L2504','L250z','L251.','L2510','L2511','L2513',
+												'L2514','L251z','L252.','L2520','L2521','L252z','L253.','L2533','L254.','L255.','L2551','L2552',
+												'L2553','L256.','L257.','L258.','L25y.','L25y0','L25y1','L25yz','L25z.','L25z0','L25z1','L25z3',
+												'L25z4','L25zz','L26..','L260.','L2600','L2602','L260z','L2611','L2612','L2621','L2622','L263.',
+												'L2630','L2631','L2632','L2633','L2634','L2635','L2636','L2637','L2638','L2639','L263A','L263z',
+												'L265.','L2650','L2651','L2652','L2653','L265z','L266.','L2660','L2661','L2662','L2663','L266z',
+												'L267.','L2672','L2673','L2674','L2675','L2676','L2677','L2678','L2679','L267A','L267z','L268.',
+												'L2680','L26y.','L26yz','L26z.','L27..','L270.','L2700','L2701','L2702','L270z','L27z.','L28..',
+												'L280.','L2800','L2801','L2802','L2803','L280z','L281.','L2810','L2811','L2812','L2813','L2814',
+												'L2815','L281z','L282.','L2820','L2823','L282z','L284.','L2840','L2841','L284z','L28y.','L28y1',
+												'L28y2','L28y3','L28z.','L28z2','L28zz','L29..','L290.','L291.','L291z','L292.','L2921','L2931',
+												'L2941','L295.','L296.','L29z.','L29zz','L2A..','L2A0.','L2A1.','L2A2.','L2A3.','L2A4.','L2A5.',
+												'L2AX.','L2B..','L2C..','L2D..','L2y..','L2z..','L3...','L30..','L300.','L3001','L3003','L3007',
+												'L301.','L3014','L3015','L302.','L303.','L3030','L3031','L303z','L304.','L3041','L305.','L3050',
+												'L3051','L3052','L305z','L306.','L3061','L307.','L3072','L307z','L308.','L3081','L308z','L309.',
+												'L3090','L3091','L309z','L30z.','L30z0','L30z1','L30zz','L31..','L310.','L311.','L3112','L312.',
+												'L3121','L3122','L313.','L3131','L313z','L314.','L3140','L31z.','L32..','L320.','L3201','L320z',
+												'L321.','L3211','L322.','L3220','L3221','L322z','L323.','L3230','L3231','L3232','L32z.','L33..',
+												'L330.','L3300','L3301','L330z','L331.','L3310','L3311','L331z','L332.','L3331','L333z','L334.',
+												'L335.','L3350','L336.','L3360','L336z','L33y.','L33y0','L33y2','L33yz','L33z.','L33z0','L33z1',
+												'L33z2','L33zz','L34..','L340.','L3400','L3401','L3402','L3403','L3404','L3405','L3406','L340z',
+												'L341.','L3410','L3411','L3412','L341z','L342.','L3420','L3421','L3422','L342z','L343.','L3430',
+												'L3431','L3432','L343z','L344.','L3440','L3441','L3442','L344z','L345.','L3450','L3451','L345z',
+												'L34y.','L34y0','L34y1','L34y2','L34yz','L34z.','L34z0','L34z1','L34zz','L35..','L350.','L3500',
+												'L3502','L350z','L351.','L3510','L3511','L3513','L351z','L352.','L3522','L352z','L353.','L3530',
+												'L353z','L354.','L3540','L3541','L355.','L3551','L356.','L3560','L3562','L356z','L357.','L3570',
+												'L3571','L35y.','L35y1','L35y2','L35z.','L35z0','L35z1','L35zz','L36..','L360.','L3600','L3601',
+												'L3602','L360z','L361.','L361z','L362.','L3620','L3622','L362z','L363.','L363z','L36z.','L37..',
+												'L370.','L3700','L370z','L371.','L3710','L3711','L3712','L371z','L37z.','L38..','L380.','L3820',
+												'L383.','L384.','L3841','L385.','L386.','L387.','L388.','L389.','L38A.','L38B.','L39..','L390.',
+												'L3903','L391.','L392.','L3920','L392z','L393.','L3930','L3931','L3932','L394.','L3940','L3941',
+												'L3942','L394z','L395.','L3950','L3951','L3952','L3953','L3954','L3955','L395z','L396.','L3960',
+												'L3961','L396z','L397.','L3970','L3971','L397z','L398.','L3980','L3981','L3982','L3983','L3984',
+												'L3985','L3986','L398z','L39y.','L39y4','L39y5','L39yz','L39z.','L39z1','L39z4','L39zz','L3A..',
+												'L3X..','L3y..','L3z..','L4105','L4113','L4115','L4125','L413.','L4130','L4132','L413z','L414.',
+												'L4153','L4155','L4166','L4170','L41z5','L431.','L4311','L4312','L444.','L4633','L5...','L51..',
+												'L510.','L512.','L514.','L51X.','Ly0..','Ly1..','Lyu01','Lyu20','Lyu21','Lyu22','Lyu24','Lyu25',
+												'Lyu26','Lyu2A','Lyu30','Lyu33','Lyu35','Lyu39','Lyu3A','Lyu3B','Lyu3C','Lyu3D','Lyu4.','Lyu40',
+												'Lyu45','Lyu48','Lyu49','Lyu5.','Lyu50','Lyu51','Lyu52','Lyu54','Lyu55','Lyu57','Lyu6A','Lyu6C',
+												'M2405','PK81.','PK84.','Q000.','Q0071','Q010.','Q011.','Q012.','Q013.','Q0151','Q016.','Q017.',
+												'Q02..','Q020.','Q021.','Q0210','Q0211','Q0212','Q0215','Q022.','Q0220','Q0222','Q026.','Q10..',
+												'Q100.','Q101.','Q102.','Q10z.','Q21..','Q210.','Q212.','Q2120','Q2121','Q2122','Q212z','Q213.',
+												'Q2130','Q2131','Q213z','Q214.','Q2140','Q2141','Q214z','Q215.','Q216.','Q21z.','Q2y..','Q2z..',
+												'Q408.','Q4082','Q4084','Q4085','Q408z','Q40y0','Q410.','Q4100','Q4102','Q4106','Q4107','Q410z',
+												'Q420.','Q423.','Q42X.','Q436.','Q470.','Q479.','Qz...','R123.','R14B.','TB142','TE400','Z212.',
+												'Z2121','Z2122','Z2123','Z22..','Z221.','Z222.','Z225.','Z226.','Z227.','Z229.','Z2291','Z22A.',
+												'Z22A1','Z22A2','Z22A3','Z22A4','Z22A5','Z22A6','Z22A7','Z22A8','Z22A9','Z22AA','Z22AB','Z22AC',
+												'Z22AD','Z22AE','Z22B.','Z22B1','Z22B4','Z22B5','Z22B8','Z22C.','Z22C1','Z22C2','Z22C3','Z22C5',
+												'Z22CF','Z22D.','Z22D1','Z22D3','Z23..','Z231.','Z234.','Z2341','Z2342','Z2343','Z2344','Z2345',
+												'Z2346','Z235.','Z2351','Z2352','Z2353','Z2354','Z236.','Z2361','Z2363','Z2364','Z2365','Z237.',
+												'Z2371','Z2372','Z238.','Z2381','Z2382','Z239.','Z2391','Z2392','Z2393','Z2395','Z2398','Z23A.',
+												'Z23A1','Z23A2','Z23A3','Z23A4','Z23A7','Z23A8','Z23A9','Z23AA','Z23AG','Z23AH','Z23AI','Z23AK',
+												'Z23AM','Z23AN','Z23AO','Z23AP','Z23B.','Z23B1','Z23B2','Z23B6','Z23B9','Z23D.','Z23D1','Z23D2',
+												'Z23E.','Z23F.','Z23G.','Z24..','Z241.','Z2411','Z242.','Z2431','Z2432','Z2433','Z2434','Z2436',
+												'Z2438','Z2444','Z2445','Z245.','Z2451','Z2452','Z2453','Z2454','Z2461','Z2462','Z2463','Z2464',
+												'Z2465','Z2466','Z2467','Z2469','Z246B','Z248.','Z249.','Z25..','Z251.','Z252.','Z253.','Z2531',
+												'Z2532','Z2533','Z254.','Z2541','Z2542','Z2543','Z2544','Z2545','Z2547','Z2548','Z2549','Z254A',
+												'Z254B','Z254C','Z254D','Z254E','Z255.','Z2554','Z2557','Z255B','Z255D','Z255F','Z2565','Z257.',
+												'Z2571','Z258.','Z26..','Z261.','Z2611','Z2612','Z2621','Z2625','Z2627','Z262A','Z262C','Z262D',
+												'Z262E','Z262I','Z262J','Z262M','Z262O','Z262R','Z263.','Z2631','Z2634','Z2639','Z263C','Z263D',
+												'Z263E','Z263F','Z263G','Z264.','Z2641','Z2644','Z2645','Z2646','Z2647','Z2648','Z2649','Z264A',
+												'Z264B','Z264C','Z265.','Z2652','Z2656','Z2658','Z2659','Z265A','Z265B','Z265C','Z27..','Z271.',
+												'Z2711','Z2712','Z2713','Z2714','Z2715','Z2716','Z2719','Z271A','Z271B','Z271C','Z271D','Z271E',
+												'Z271F','Z271G','Z271H','Z28..','Z285C','Z288.','Z675.','Z6U4.','ZC2CB','ZV22.','ZV220','ZV221',
+												'ZV222','ZV223','ZV224','ZV22y','ZV22z','ZV23.','ZV231','ZV234','ZV236','ZV237','ZV238','ZV23y',
+												'ZV23z','ZV240','ZV27.','ZV270','ZV272','ZV275','ZV27y','ZV27z','ZV28.','ZV280','ZV281','ZV282',
+												'ZV283','ZV284','ZV285','ZV286','ZV28y','ZV28z','ZV3..','ZV300','ZV31.','ZV310','ZV31z','ZV330',
+												'ZV3z.','ZV3z0','ZV3zz','ZV4J0','ZV618','ZV619','ZVu23','ZVu26','ZVu27','ZVu29','629..','62I1.',
+												'62I3.','62I4.','62I5.','62IZ.','62J..','62J1.','62J2.','62J3.','62J4.','62J5.','62J6.','62JZ.',
+												'62O9.','62P..','62P1.','62P2.','62P3.','62P4.','62P5.','62P6.','62P7.','62P8.','62P9.','62PA.',
+												'62PB.','62PC.','62PD.','62PZ.','62Q..','62Q1.','62Q2.','62Q3.','62Q4.','62Q5.','62Q6.','62QZ.',
+												'62R..','62R1.','62R2.','62R3.','62R4.','62R5.','62R6.','62R7.','62R8.','62R9.','62RA.','62RB.',
+												'62RC.','62RD.','62RZ.','62S..','62S1.','62S2.','62S3.','62S4.','62S5.','62S6.','62S7.','62SZ.',
+												'62T..','62T1.','62TZ.','62Z..','631Z.','6332 ','6334 ','6335 ','6337 ','6347 ','634Z.','6382 ',
+												'6383 ','63B5.','63C1.','63C2.','63C4.','63C5.','63C6.','63C7.','63C8.','63C9.','63CA.','63CB.',
+												'63CC.','63CD.','63D..','63D5.','63DZ.','63F..','63Z..','7F054','7F10y','7F113','7F140','7F170',
+												'7F181','7F1Bz','7F241','7F270','L002.','L03..','L030.','L031.','L0310','L0311','L031z','L032.',
+												'L03y.','L03y0','L03y2','L03yz','L03z.','L10y1','L10z1','L12..','L120.','L1200','L120z','L121.',
+												'L1210','L121z','L122.','L1220','L122z','L128.','L1280','L1282','L12z.','L12z0','L12zz','L1601',
+												'L1664','L1684','L169.','L1690','L1691','L1694','L169z','L16A2','L17..','L173.','L1730','L174.',
+												'L1750','L175z','L176.','L1765','L17y.','L17yz','L17z.','L18..','L180.','L1800','L180z','L181.',
+												'L1811','L1815','L181z','L182.','L1820','L182z','L183z','L184.','L1842','L1844','L1850','L187.',
+												'L1870','L1880','L1882','L188z','L189.','L18A.','L18B.','L18C.','L18D.','L18z.','L18zz','L1A..',
+												'L1y..','L1z..','L23z.','L23zz','L24..','L240.','L240z','L241.','L2412','L241z','L242.','L242z',
+												'L244.','L2444','L244z','L246.','L2464','L246z','L247.','L2470','L247z','L248.','L2480','L248z',
+												'L24z4','L24zz','L261.','L2610','L261z','L262.','L2620','L262z','L2821','L2832','L290z','L2911',
+												'L292z','L293.','L29yz','L29z0','L3000','L3020','L302z','L30z2','L312z','L3210','L321z','L3302',
+												'L333.','L3452','L35yz','L35z4','L3610','L3621','L3910','L3945','L3946','L39A.','L39B.','L39y1',
+												'L40..','L400.','L4000','L4001','L4002','L400z','L401.','L4012','L401z','L402.','L4020','L403.',
+												'L4030','L40z.','L40z0','L40zz','L41..','L410.','L4100','L4104','L4106','L410z','L411.','L4110',
+												'L4116','L411z','L412.','L4120','L4122','L4124','L4126','L412z','L4131','L4140','L4142','L414z',
+												'L415.','L4150','L4156','L416.','L4160','L4161','L4162','L4163','L4165','L416z','L417.','L4171',
+												'L41yz','L41z.','L41z6','L42..','L420.','L4200','L420z','L42z.','L43..','L430.','L432.','L433.',
+												'L43z.','L43z0','L43z1','L43z4','L43zz','L44..','L440.','L4400','L4401','L4403','L441.','L4410',
+												'L4412','L441z','L442.','L4420','L4421','L4422','L442z','L443.','L4430','L4432','L443z','L44y.',
+												'L44y0','L44y1','L44yz','L44z.','L44z0','L44zz','L45..','L450.','L4500','L4501','L4504','L450z',
+												'L451.','L4510','L4511','L4514','L451z','L452.','L4520','L4521','L4522','L4523','L4524','L452z',
+												'L45y.','L45y0','L45y1','L45yz','L45z.','L45z0','L45z1','L45z4','L45zz','L46..','L460.','L4600',
+												'L4603','L460z','L462.','L4620','L4621','L4622','L4623','L4624','L462z','L463.','L4630','L4631',
+												'L4634','L463z','L466.','L4660','L4661','L4663','L466z','L46y.','L46y1','L4y..','L4z..','L511.',
+												'Ly...','Lyu62','Lyu63','Lyu67','Lyu6B','Lyu7.','Lz...','L100.','L1000','L100z'
+												))
+				SELECT coh.ALF_PE,
+						coh.PABX_STR,
+						max(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_PABX_COH3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						LEFT JOIN SAIL1169V.WDSD_AR_PERS_20210704 AS wdsd
+							ON coh.ALF_PE = wdsd.ALF_PE
+								WHERE CTE.EVENT_DT < coh.PABX_STR
+								AND YEARS_BETWEEN(wdsd.WOB, CTE.EVENT_DT) < 55
+					GROUP BY coh.ALF_PE,
+							coh.PABX_STR;
+										
+COMMIT;
+
+/* Update repeat antibiotics table with the prior pregnancy date */
+/* Flag where preganancy code between abx event_dt and abx event_dt - 40 weeks */
+
+ALTER TABLE SAILW1169V.VB_PABX_COH3
+	ADD COLUMN PREG INTEGER
+	ADD COLUMN LAST_PREG_DT DATE;
+
+MERGE INTO SAILW1169V.VB_PABX_COH3 AS coh
+	USING SESSION.VB_COHORT_EVENT_PREG AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+		AND coh.PABX_STR = gpev.PABX_STR
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.LAST_PREG_DT = gpev.PREG_DT
+			;
+
+UPDATE SAILW1169V.VB_PABX_COH3
+	SET PREG = CASE WHEN LAST_PREG_DT IS NOT NULL
+					AND WEEKS_BETWEEN(PABX_STR, LAST_PREG_DT) < 40  
+					THEN 1
+				ELSE 0
+			END;
+-------------------------------------------------------------------------------------------------------------
+		
+/* update cohort table with catheter
+Link all cohort3 rUTI events to gp event to identify any events with catheter read codes
+Identify first event date for any episode with a recorded catheter read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_CATHETER
+			(ALF_PE INTEGER, 
+			PABX_STR DATE,
+			CATH_DT DATE)
+	ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_CATHETER
+							(ALF_PE, 
+							PABX_STR,
+							CATH_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('461C.','4JJ4.','66K8.','66K9.','66K90','66K91','7B241','7B2B.','7B2B1','7B2B2','7B2B5','7B2B8',
+												'7B2By','7B2Bz','7B2C1','7B2C2','7B2C9','8156.','81560','8B3v.','8D74.','8D76.','8E98.','9NgX.',
+												'K182.','SP...','SP031','SP033','SP07Q','TB16.','ZV536','ZV53A','ZV53E','ZV658','gf2..','gf2k.',
+												'gf2l.','gf2m.','gf2n.','gf2o.','gf2p.','p8...','p81..','p811.','p812.','p813.','p814.','p815.',
+												'p816.','p817.','p818.','p819.','p81A.','p81B.','p81C.','p81D.','p81E.','p81F.','p81G.','p81H.',
+												'p81I.','p81J.','p81K.','p81L.','p81M.','p81N.','p81O.','p81P.','p81Q.','p81R.','p81S.','p81T.',
+												'p81U.','p81V.','p81W.','p81X.','p81Y.','p81a.','p81b.','p81c.','p81d.','p81e.','p81f.','p81g.',
+												'p81h.','p81i.','p81j.','p81k.','p81l.','p81m.','p81n.','p81o.','p81p.','p81q.','p81r.','p81s.',
+												'p81t.','p81u.','p81v.','p81w.','p81x.','p81y.','p81z.','p82..','p821.','p822.','p823.','p824.',
+												'p825.','p83..','p831.','p832.','p833.','p834.','p835.','p836.','p837.','p838.','p839.','p83A.',
+												'p83B.','p83C.','p83D.','p83E.','p83F.','p83G.','p83H.','p83J.','p83K.','p83L.','p83M.','p83N.',
+												'p83P.','p83Q.','p83R.','p83S.','p83T.','p83U.','p83V.','p83W.','p83X.','p83Y.','p83Z.','p83a.',
+												'p83b.','p83c.','p83d.','p83e.','p83f.','p83g.','p83h.','p83i.','p83j.','p83k.','p83l.','p83m.',
+												'p83n.','p83o.','p83p.','p83q.','p83r.','p83s.','p83t.','p83u.','p83v.','p83w.','p83x.','p83y.',
+												'p84..','p841.','p842.','p843.','p844.','p845.','p846.','p847.','p848.','p849.','p84A.','p84B.',
+												'p84C.','p84D.','p84E.','p84F.','p84G.','p84H.','p84I.','p84J.','p84K.','p84L.','p84M.','p84N.',
+												'p84O.','p84P.','p84Q.','p84R.','p84S.','p84T.','p84U.','p84V.','p84W.','p84X.','p84Y.','p84Z.',
+												'p84a.','p84b.','p84c.','p84d.','p84e.','p84f.','p84g.','p84h.','p84i.','p84j.','p84k.','p84l.',
+												'p84m.','p84n.','p84o.','p84p.','p84q.','p84r.','p84s.','p84t.','p84u.','p84v.','p84w.','p84x.',
+												'p84y.','p84z.','p86..','p861.','p862.','p863.','p864.','p865.','p866.','p867.','p868.','p869.',
+												'p86A.','p86B.','p86C.','p86D.','p86E.','p86F.','p86G.','p86H.','p86I.','p86J.','p86K.','p86L.',
+												'p86M.','p86N.','p86O.','p86P.','p86Q.','p86R.','p86S.','p86T.','p86U.','p86V.','p86W.','p86X.',
+												'p86Y.','p86Z.','p86a.','p86b.','p86c.','p86d.','p86e.','p86f.','p86g.','p86h.','p86i.','p86j.',
+												'p86k.','p86l.','p86m.','p86n.','p86o.','p86p.','p86q.','p86r.','p86s.','p86t.','p86u.','p86v.',
+												'p86w.','p86x.','p86y.','p86z.','p87..','p871.','p872.','p873.','p874.','p875.','p876.','p877.',
+												'p878.','p879.','p87A.','p87B.','p87C.','p87D.','p87E.','p87F.','p87G.','p87H.','p87J.','p87K.',
+												'p87L.','p87M.','p87N.','p87P.','p87Q.','p87R.','p87S.','p87T.','p87U.','p87V.','p87W.','p87X.',
+												'p87Y.','p87Z.','p87a.','p87b.','p87c.','p87d.','p87e.','p87f.','p87g.','p87h.','p87i.','p87j.',
+												'p87k.','p87m.','p87n.','p87o.','p87p.','p87q.','p87r.','p87s.','p87t.','p87u.','p87v.','p87w.',
+												'p87x.','p87y.','p87z.','p88..','p881.','p882.','p883.','p884.','p885.','p886.','p887.','p888.',
+												'p889.','p88A.','p88B.','p88C.','p88D.','p88E.','p88F.','p88G.','p88H.','p88I.','p88J.','p88K.',
+												'p88L.','p88M.','p88N.','p88P.','p88Q.','p88R.','p88S.','p88T.','p88U.','p88V.','p88W.','p88X.',
+												'p88Y.','p88Z.','p88a.','p88b.','p88c.','p88d.','p88e.','p88f.','p88g.','p88h.','p88j.','p88k.',
+												'p88l.','p88m.','p88n.','p88o.','p88p.','p88q.','p88r.','p88s.','p88t.','p88u.','p88v.','p88w.',
+												'p88x.','p88y.','p88z.','p89..','p891.','p892.','p893.','p894.','p895.','p896.','p897.','p898.',
+												'p899.','p89A.','p89B.','p89C.','p89D.','p89E.','p89F.','p89G.','p89H.','p89I.','p89J.','p89K.',
+												'p89L.','p89M.','p89N.','p89O.','p89P.','p89Q.','p89R.','p89S.','p89T.','p89U.','p89V.','p89W.',
+												'p89X.','p89Y.','p89Z.','p89a.','p89b.','p89c.','p89d.','p89e.','p89f.','p89g.','p89h.','p89i.',
+												'p89j.','p89k.','p89m.','p89n.','p89p.','p89q.','p89r.','p89s.','p89t.','p89u.','p89v.','p89w.',
+												'p89x.','p89y.','p8A..','p8A1.','p8A2.','p8A3.','p8A4.','p8A5.','p8A6.','p8A7.','p8A8.','p8A9.',
+												'p8AA.','p8AB.','p8AC.','p8AD.','p8AE.','p8AF.','p8AG.','p8AH.','p8AJ.','p8AK.','p8AL.','p8AM.',
+												'p8AN.','p8AP.','p8AQ.','p8AR.','p8AS.','p8AT.','p8AU.','p8AV.','p8AW.','p8AX.','p8AY.','p8AZ.',
+												'p8Aa.','p8Ab.','p8Ac.','p8Ad.','p8Ae.','p8Af.','p8Ag.','p8Ah.','p8Aj.','p8Ak.','p8Am.','p8An.',
+												'p8Ap.','p8Aq.','p8Ar.','p8As.','p8At.','p8Au.','p8B..','p8B1.','p8B2.','p8B3.','p8B4.','p8B5.',
+												'p8B6.','p8B7.','p8B8.','p8B9.','p8BA.','p8BB.','p8BC.','p8BD.','p8BE.','p8BF.','p8BG.','p8BH.',
+												'p8BJ.','p8BK.','p8BL.','p8BM.','p8BN.','p8BP.','p8BQ.','p8BR.','p8BS.','p8BT.','p8BU.','p8BV.',
+												'p8BW.','p8BX.','p8BY.','p8BZ.','p8Ba.','p8Bb.','p8Bc.','p8Bd.','p8Be.','p8Bf.','p8Bg.','p8Bh.',
+												'p8Bj.','p8Bk.','p8Bm.','p8Bn.','p8Bp.','p8Bq.','p8Br.','p8Bs.','p8Bt.','p8Bu.','p8Bv.','p8Bw.',
+												'p8Bx.','p8By.','p8Bz.','p8C..','p8C1.','p8C2.','p8C3.','p8C4.','p8C5.','p8C6.','p8C7.','p8C8.',
+												'p8C9.','p8CA.','p8CB.','p8CC.','p8CD.','p8CE.','p8CF.','p8CG.','p8CH.','p8CJ.','p8CK.','p8CL.',
+												'p8CM.','p8CN.','p8CP.','p8CQ.','p8CR.','p8CS.','p8CT.','p8CU.','p8CV.','p8CW.','p8CX.','p8CY.',
+												'p8CZ.','p8Ca.','p8Cb.','p8Cc.','p8Cd.','p8Ce.','p8Cf.','p8Cg.','p8Ch.','p8Ci.','p8Cj.','p8Ck.',
+												'p8Cm.','p8Cn.','p8Co.','p8Cp.','p8Cq.','p8Cr.','p8Cs.','p8Ct.','p8Cu.','p8Cv.','p8Cw.','p8Cx.',
+												'p8Cy.','p8Cz.','p8D..','p8D1.','p8D2.','p8D3.','p8D4.','p8D5.','p8D6.','p8D7.','p8D8.','p8D9.',
+												'p8DA.','p8DB.','p8DC.','p8DD.','p8DE.','p8DF.','p8DG.','p8DH.','p8DJ.','p8DK.','p8DL.','p8DM.',
+												'p8DN.','p8DP.','p8DQ.','p8DR.','p8DS.','p8DT.','p8DU.','p8DV.','p8DW.','p8DX.','p8DY.','p8DZ.',
+												'p8Da.','p8Db.','p8Dc.','p8Dd.','p8De.','p8Df.','p8Dg.','p8Dh.','p8Di.','p8Dj.','p8Dk.','p8Dl.',
+												'p8Dm.','p8Dn.','p8Do.','p8Dp.','p8Dq.','p8Dr.','p8Ds.','p8Dt.','p8Du.','p8Dv.','p8Dw.','p8Dx.',
+												'p8Dy.','p8Dz.','p8E..','p8E1.','p8E2.','p8E3.','p8E4.','p8E5.','p8E6.','p8E7.','p8E8.','p8E9.',
+												'p8EA.','p8EB.','p8EC.','p8ED.','p8EE.','p8EF.','p8EG.','p8EH.','p8EI.','p8EJ.','p8EK.','p8EL.',
+												'p8EM.','p8EN.','p8EP.','p8EQ.','p8ER.','p8ES.','p8ET.','p8EU.','p8EV.','p8EW.','p8EX.','p8EY.',
+												'p8EZ.','p8Ea.','p8Eb.','p8Ec.','p8Ed.','p8Ee.','p8Ef.','p8Eg.','p8Eh.','p8Ei.','p8Ej.','p8Ek.',
+												'p8Em.','p8En.','p8Eo.','p8Ep.','p8Eq.','p8Er.','p8Es.','p8Et.','p8Eu.','p8Ev.','p8Ew.','p8Ex.',
+												'p8Ey.','p8Ez.','p8G..','p8G1.','p8G2.','p8G3.','p8G4.','p8G5.','p8G6.','p8G7.','p8G8.','p8G9.',
+												'p8GA.','p8GB.','p8GC.','p8GD.','p8GE.','p8GF.','p8GG.','p8GH.','p8GI.','p8GJ.','p8GK.','p8GL.',
+												'p8GM.','p8GN.','p8GO.','p8GP.','p8GQ.','p8GR.','p8GS.','p8GT.','p8GU.','p8GV.','p8GW.','p8GX.',
+												'p8GY.','p8GZ.','p8Ga.','p8Gb.','p8Gc.','p8Gd.','p8Ge.','p8Gf.','p8Gg.','p8Gh.','p8Gi.','p8Gj.',
+												'p8Gk.','p8Gl.','p8Gm.','p8Gn.','p8Go.','p8Gp.','p8Gq.','p8Gr.','p8Gs.','p8Gt.','p8Gu.','p8Gv.',
+												'p8Gw.','p8Gx.','p8Gy.','p8Gz.','p8H..','p8H1.','p8H2.','p8H3.','p8H4.','p8H5.','p8H6.','p8H7.',
+												'p8H8.','p8H9.','p8HA.','p8HB.','p8HC.','p8HD.','p8HE.','p8HF.','p8HG.','p8HH.','p8HJ.','p8HK.',
+												'p8HL.','p8HM.','p8HN.','p8HO.','p8HP.','p8HQ.','p8HR.','p8HS.','p8HT.','p8HU.','p8HV.','p8HW.',
+												'p8HX.','p8HY.','p8HZ.','p8Ha.','p8Hb.','p8Hc.','p8Hd.','p8He.','p8Hf.','p8Hg.','p8Hh.','p8Hi.',
+												'p8Hj.','p8Hk.','p8Hl.','p8Hm.','p8Hn.','p8Ho.','p8Hp.','p8Hq.','p8Hr.','p8Hs.','p8Ht.','p8Hu.',
+												'p8Hv.','p8Hw.','p8Hx.','p8Hy.','p8J..','p8J1.','p8J2.','p8J3.','p8J4.','p8J5.','p8J6.','p8J7.',
+												'p8J8.','p8J9.','p8JA.','p8JB.','p8JC.','p8JD.','p8JE.','p8JF.','p8JG.','p8JH.','p8JI.','p8JJ.',
+												'p8JK.','p8JL.','p8JM.','p8JN.','p8JO.','p8JP.','p8JQ.','p8JR.','p8JS.','p8JT.','p8JU.','p8JV.',
+												'p8JW.','p8JX.','p8JY.','p8JZ.','p8Ja.','p8Jb.','p8Jc.','p8Jd.','p8Je.','p8Jf.','p8Jg.','p8Jh.',
+												'p8Ji.','p8Jj.','p8Jk.','p8Jl.','p8Jm.','p8Jn.','p8Jo.','p8Jp.','p8Jq.','p8Jr.','p8Js.','p8Jt.',
+												'p8Ju.','p8Jv.','p8Jw.','p8Jx.','p8Jy.','p8Jz.','p8K..','p8K1.','p8K2.','p8K3.','p8K4.','p8K5.',
+												'p8K6.','p8K7.','p8K8.','p8K9.','p8KA.','p8KB.','p8KC.','p8KD.','p8KE.','p8KF.','p8KG.','p8KH.',
+												'p8KJ.','p8KK.','p8KL.','p8KM.','p8KN.','p8KP.','p8KQ.','p8KR.','p8KS.','p8KT.','p8KU.','p8KV.',
+												'p8KW.','p8KX.','p8KY.','p8KZ.','p8Ka.','p8Kb.','p8Kc.','p8Kd.','p8Ke.','p8Kf.','p8Kg.','p8Kh.',
+												'p8Ki.','p8Kj.','p8Kk.','p8Km.','p8Kn.','p8Kp.','p8Kq.','p8Kr.','p8Ks.','p8Kt.','p8Ku.','p8Kv.',
+												'p8Kw.','p8Kx.','p8Ky.','p8L..','p8L1.','p8L2.','p8L3.','p8L4.','p8L5.','p8L6.','p8L7.','p8L8.',
+												'p8L9.','p8LA.','p8LB.','p8LC.','p8LD.','p8LE.','p8LF.','p8LG.','p8LH.','p8LJ.','p8LK.','p8LL.',
+												'p8LM.','p8LP.','p8LQ.','p8LR.','p8LS.','p8LT.','p8LU.','p8LV.','p8LW.','p8LX.','p8LY.','p8LZ.',
+												'p8La.','p8Lb.','p8Lc.','p8Ld.','p8Le.','p8Lf.','p8Lg.','p8Lh.','p8Li.','p8Lj.','p8Lk.','p8Ll.',
+												'p8Lm.','p8Ln.','p8Lo.','p8Lp.','p8Lq.','p8Lr.','p8Ls.','p8Lt.','p8M..','p8M1.','p8M2.','p8M3.',
+												'p8M4.','p8M5.','p8M6.','p8M7.','p8M8.','p8M9.','p8MA.','p8MB.','p8MC.','p8MD.','p8ME.','p8MF.',
+												'p8MG.','p8MH.','p8MJ.','p8MK.','p8ML.','p8MM.','p8MN.','p8MO.','p8MP.','p8MQ.','p8MR.','p8MS.',
+												'p8MT.','p8MU.','p8MV.','p8MW.','p8MX.','p8MY.','p8MZ.','p8Ma.','p8Mb.','p8Mc.','p8Md.','p8Me.',
+												'p8Mf.','p8Mg.','p8Mh.','p8N..','p8N1.','p8N2.','p8N3.','p8N4.','p8N5.','p8N6.','p8N7.','p8N8.',
+												'p8N9.','p8NA.','p8NB.','p8NC.','p8ND.','p8NE.','p8NF.','p8NG.','p8NH.','p8NJ.','p8NK.','p8NL.',
+												'p8NM.','p8NN.','p8NP.','p8NQ.','p8NR.','p8NS.','p8NT.','p8NU.','p8NV.','p8NW.','p8NX.','p8NY.',
+												'p8NZ.','p8Na.','p8Nb.','p8Nc.','p8Nd.','p8Ne.','p8Nf.','p8Ng.','p8Nh.','p8Ni.','p8Nj.','p8Nk.',
+												'p8Nl.','p8Nm.','p8Nn.','p8No.','p8Np.','p8Nq.','p8Nr.','p8Ns.','p8Nt.','p8Nu.','p8Nv.','p8Nw.',
+												'p8Nx.','p8Ny.','p8Nz.','p8O..','p8O1.','p8O2.','p8O3.','p8O4.','p8O5.','p8O6.','p8O7.','p8O8.',
+												'p8O9.','p8OA.','p8OB.','p8OC.','p8OD.','p8OE.','p8OF.','p8OG.','p8OH.','p8OI.','p8OJ.','p8OK.',
+												'p8OL.','p8OM.','p8ON.','p8OO.','p8OP.','p8OQ.','p8OR.','p8OS.','p8OT.','p8OU.','p8OV.','p8OW.',
+												'p8OX.','p8OY.','p8OZ.','p8Oa.','p8Ob.','p8Oc.','p8Od.','p8Oe.','p8Of.','p8Og.','p8Oh.','p8Oi.',
+												'p8Oj.','p8Ok.','p8Ol.','p8Om.','p8P..','p8P1.','p8P2.','p8P3.','p8P4.','p8P5.','p8P6.','p8P7.',
+												'p8P8.','p8P9.','p8PA.','p8PB.','p8PC.','p8PD.','p8PE.','p8PF.','p8PG.','p8PH.','p8PI.','p8PJ.',
+												'p8PK.','p8PL.','p8PM.','p8PN.','p8PO.','p8PP.','p8PQ.','p8PR.','p8PS.','p8PT.','p8PU.','p8PV.',
+												'p8PW.','p8PX.','p8PY.','p8PZ.','p8Pa.','p8Pb.','p8Pc.','p8Pd.','p8Pe.','p8Pf.','p8Pg.','p8Ph.',
+												'p8Pi.','p8Pj.','p8Pk.','p8Pl.','p8Pm.','p8Pn.','p8Po.','p8Pp.','p8Pq.','p8Pr.','p8Ps.','p8Pt.',
+												'p8Pu.','p8Pv.','p8Pw.','p8Px.','p8Py.','p8Pz.','p8Q..','p8Q1.','p8Q2.','p8Q3.','p8Q4.','p8Q5.',
+												'p8Q6.','p8Q7.','p8Q8.','p8Q9.','p8QA.','p8QB.','p8QC.','p8QD.','p8QE.','p8QF.','p8QG.','p8QH.',
+												'p8QI.','p8QJ.','p8QK.','p8QL.','p8QM.','p8QN.','p8QO.','p8QP.','p8QQ.','p8QR.','p8QS.','p8QT.',
+												'p8QU.','p8QV.','p8QW.','p8QX.','p8R..','p8R1.','p8R2.','p8R3.','p8R4.','p8R5.','p8R6.','p8R7.',
+												'p8R8.','p8R9.','p8RA.','p8RB.','p8RC.','p8RD.','p8RE.','p8RF.','p8RG.','p8RH.','p8RI.','p8RJ.',
+												'p8RK.','p8RL.','p8RM.','p8RN.','p8RO.','p8RP.','p8RQ.','p8RR.','p8RS.','p8RT.','p8RU.','p8RV.',
+												'p8RW.','p8RX.','p8RY.','p8RZ.','p8Ra.','p8Rb.','p8Rc.','p8Rd.','p8Re.','p8Rf.','p8Rg.','p8Rh.',
+												'p8Ri.','p8Rj.','p8Rk.','p8Rl.','p8Rm.','p8Rn.','p8Ro.','p8Rp.','p8Rq.','p8Rr.','p8S..','p8S1.',
+												'p8S2.','p8S3.','p8S4.','p8S5.','p8S6.','p8S7.','p8S8.','p8S9.','p8SA.','p8SB.','p8SC.','p8SD.',
+												'p8SE.','p8SF.','p8SG.','p8SH.','p8SI.','p8SJ.','p8SK.','p8SL.','p8SM.','p8SN.','p8SO.','p8SP.',
+												'p8SQ.','p8SR.','p8SS.','p8ST.','p8SU.','p8SV.','p8SW.','p8SX.','p8SY.','p8SZ.','p8Sa.','p8Sb.',
+												'p8Sc.','p8Sd.','p8Se.','p8Sf.','p8Sg.','p8Sh.','p8Si.','p8Sj.','p8Sk.','p8Sl.','p8Sm.','p8Sn.',
+												'p8So.','p8Sp.','p8Sq.','p8Sr.','p8Ss.','p8St.','p8Su.','p8Sv.','p8Sw.','p8Sx.','p8Sy.','p8Sz.',
+												'p8T..','p8T1.','p8T2.','p8T3.','p8T4.','p8T5.','p8T6.','p8T7.','p8T8.','p8T9.','p8TA.','p8TB.',
+												'p8TC.','p8TD.','p8TE.','p8TF.','p8TG.','p8TH.','p8TI.','p8TJ.','p8TK.','p8TL.','p8TM.','p8TN.',
+												'p8TO.','p8TP.','p8TQ.','p8TR.','p8TS.','p8TT.','p8TU.','p8TV.','p8TW.','p8TX.','p8TY.','p8TZ.',
+												'p8Ta.','p8Tb.','p8Tc.','p8Td.','p8Te.','p8Tf.','p8Tg.','p8Th.','p8Ti.','p8Tj.','p8Tk.','p8Tl.',
+												'p8Tm.','p8Tn.','p8To.','p8Tp.','p8Tq.','p8Tr.','p8Ts.','p8Tt.','p8Tu.','p8Tv.','p8Tw.','p8Tx.',
+												'p8Ty.','p8Tz.','p8U..','p8U1.','p8U2.','p8U3.','p8U4.','p8U5.','p8U6.','p8U7.','p8U8.','p8U9.',
+												'p8UA.','p8UB.','p8UC.','p8UD.','p8UE.','p8UF.','p8UG.','p8UH.','p8UI.','p8UJ.','p8UK.','p8UL.',
+												'p8UM.','p8UN.','p8UO.','p8UP.','p8UQ.','p8UR.','p8US.','p8UT.','p8UU.','p8UV.','p8UW.','p8UX.',
+												'p8UY.','p8UZ.','p8Ua.','p8Ub.','p8Uc.','p8Ud.','p8Ue.','p8Uf.','p8Ug.','p8Uh.','p8Ui.','p8Uj.',
+												'p8Uk.','p8Ul.','p8Um.','p8Un.','p8Uo.','p8Up.','p8Uq.','p8Ur.','p8Us.','p8Ut.','p8Uv.','p8Uw.',
+												'p8Ux.','p8Uy.','p8Uz.','p8V..','p8V1.','p8W..','p8W1.','p8W2.','p8W3.','p8W4.','p8W5.','p8W6.',
+												'p8W7.','p8W8.','p8W9.','p8WA.','p8WB.','p8WC.','p8WD.','p8WE.','p8WF.','p8WG.','p8WH.','p8WI.',
+												'p8WJ.','p8WK.','p8WL.','p8WM.','p8WN.','p8WO.','p8WP.','p8WQ.','p8WR.','p8WS.','p8WT.','p8WU.',
+												'p8WV.','p8WW.','p8WX.','p8WY.','p8WZ.','p8Wa.','p8Wb.','p8Wc.','p8Wd.','p8We.','p8Wf.','p8Wg.',
+												'p8Wn.','p8Wo.','p8Wp.','p8Wq.','p8Wr.','p8Ws.','p8Wt.','p8Wu.','p8Wv.','p8Ww.','p8X..','p8X1.',
+												'p8X2.','p8X3.','p8X4.','p8X5.','p8X6.','p8X7.','p8X8.','p8X9.','p8XA.','p8XB.','p8XC.','p8XD.',
+												'p8XE.','p8XF.','p8XG.','p8XH.','p8XI.','p8XJ.','p8XK.','p8XL.','p8XM.','p8XN.','p8XO.','p8XP.',
+												'p8XQ.','p8XR.','p8XS.','p8XT.','p8XU.','p8XV.','p8XW.','p8XX.','p8XY.','p8XZ.','p8Xa.','p8Xb.',
+												'p8Xc.','p8Xd.','p8Xe.','p8Xf.','p8Xg.','p8Xh.','p8Xi.','p8Xj.','p8Xk.','p8Xl.','p8Xm.','p8Xn.',
+												'p8Xo.','p8Xp.','p8Xq.','p8Xr.','p8Xs.','p8Xt.','p8Xu.','p8Xv.','p8Xw.','p8Y..','p8Y1.','p8Y2.',
+												'p8Y3.','p8Y4.','p8Y5.','p8Y6.','p8Y7.','p8Y8.','p8Y9.','p8YA.','p8YB.','p8YC.','p8YD.','p8YE.',
+												'p8YF.','p8YG.','p8YH.','p8YI.','p8YJ.','p8YK.','p8YM.','p8YN.','p8YO.','p8YP.','p8YQ.','p8YR.',
+												'p8YS.','p8YT.','p8YU.','p8YV.','p8YW.','p8YX.','p8YY.','p8YZ.','p8Ya.','p8Yb.','p8Yc.','p8Yd.',
+												'p8Ye.','p8Yf.','p8Yg.','p8Yh.','p8Yi.','p8Yj.','p8Yk.','p8Yl.','p8Ym.','p8Yn.','p8Yo.','p8Yp.',
+												'p8Yq.','p8Yr.','p8Ys.','p8Yt.','p8Yu.','p8Yv.','p8Yw.','p8Yx.','p8Yy.','p8Yz.','p8Z..','p8Z1.',
+												'p8Z2.','p8Z3.','p8Z4.','p8Z5.','p8Z6.','p8Z7.','p8Z8.','p8Z9.','p8ZA.','p8ZB.','p8ZC.','p8ZD.',
+												'p8ZE.','p8ZF.','p8ZG.','p8ZH.','p8ZJ.','p8ZK.','p8ZL.','p8ZM.','p8ZN.','p8ZR.','p8ZS.','p8a..',
+												'p8a1.','p8a2.','p8a3.','p8a4.','p8a5.','p8a6.','p8a7.','p8a8.','p8a9.','p8aA.','p8aB.','p8aC.',
+												'p8aD.','p8aE.','p8aF.','p8aG.','p8aH.','p8aI.','p8aJ.','p8aK.','p8aL.','p8aM.','p8aN.','p8aO.',
+												'p8aP.','p8aQ.','p8aR.','p8aS.','p8aT.','p8aU.','p8aV.','p8aW.','p8aX.','p8aY.','p8aZ.','p8aa.',
+												'p8ab.','p8ac.','p8ad.','p8ae.','p8af.','p8ag.','p8ah.','p8ai.','p8aj.','p8ak.','p8al.','p8am.',
+												'p8an.','p8ao.','p8ap.','p8aq.','p8ar.','p8as.','p8at.','p8au.','p8av.','p8aw.','p8ax.','p8ay.',
+												'p8az.','p8b..','p8b1.','p8b2.','p8b3.','p8b4.','p8b5.','p8b6.','p8b7.','p8b8.','p8b9.','p8bA.',
+												'p8bB.','p8bC.','p8bD.','p8bE.','p8bF.','p8bG.','p8bH.','p8bI.','p8bJ.','p8bK.','p8bL.','p8bM.',
+												'p8bN.','p8bO.','p8bP.','p8bQ.','p8bR.','p8bS.','p8bT.','p8bU.','p8bn.','p8bo.','p8bp.','p8bq.',
+												'p8br.','p8bs.','p8bt.','p8bu.','p8bv.','p8bw.','p8bx.','p8by.','p8bz.','p8c..','p8c1.','p8c2.',
+												'p8c3.','p8c4.','p8c5.','p8c6.','p8c7.','p8c8.','p8c9.','p8cA.','p8cB.','p8cC.','p8cD.','p8cE.',
+												'p8cF.','p8cG.','p8cH.','p8cI.','p8cJ.','p8cK.','p8cL.','p8cM.','p8cN.','p8cO.','p8cP.','p8cQ.',
+												'p8cR.','p8cS.','p8cT.','p8cU.','p8cV.','p8cW.','p8cX.','p8cY.','p8cZ.','p8ca.','p8cb.','p8cc.',
+												'p8cd.','p8ce.','p8cf.','p8cg.','p8ch.','p8ci.','p8cj.','p8ck.','p8cl.','p8cm.','p8cn.','p8co.',
+												'p8cp.','p8cq.','p8cr.','p8cs.','p8ct.','p8cu.','p8cw.','p8cx.','p8cy.','p8cz.','p8d..','p8d1.',
+												'p8d2.','p8d3.','p8d4.','p8d5.','p8d6.','p8d7.','p8d8.','p8d9.','p8dA.','p8dB.','p8dC.','p8dD.',
+												'p8dE.','p8dF.','p8dG.','p8dH.','p8dI.','p8dJ.','p8dK.','p8dL.','p8dM.','p8dN.','p8dO.','p8dP.',
+												'p8dQ.','p8dR.','p8dS.','p8dT.','p8dU.','p8dV.','p8dW.','p8dX.','p8dY.','p8dZ.','p8da.','p8db.',
+												'p8dc.','p8dd.','p8de.','p8df.','p8dg.','p8dh.','p8di.','p8dj.','p8dk.','p8dl.','p8dm.','p8dn.',
+												'p8do.','p8dp.','p8dq.','p8dr.','p8ds.','p8dt.','p8du.','p8dv.','p8dw.','p8dx.','p8dy.','p8dz.',
+												'p8e..','p8e1.','p8e2.','p8e3.','p8e4.','p8e5.','p8e6.','p8e7.','p8e8.','p8e9.','p8eA.','p8eB.',
+												'p8eC.','p8eD.','p8eE.','p8eF.','p8eG.','p8eH.','p8eI.','p8eJ.','p8eK.','p8eL.','p8ee.','p8ef.',
+												'p8eg.','p8eh.','p8ei.','p8ej.','p8ek.','p8el.','p8em.','p8en.','p8eo.','p8ep.','p8eq.','p8er.',
+												'p8es.','p8et.','p8eu.','p8ev.','p8ew.','p8ex.','p8ey.','p8ez.','p8f..','p8f1.','p8f2.','p8f3.',
+												'p8f4.','p8f5.','p8f6.','p8f7.','p8f8.','p8f9.','p8fA.','p8fB.','p8fC.','p8fD.','p8fE.','p8fF.',
+												'p8fG.','p8fH.','p8fI.','p8fJ.','p8fK.','p8fL.','p8fM.','p8fN.','p8fO.','p8fP.','p8fQ.','p8fR.',
+												'p8fS.','p8fT.','p8fU.','p8fV.','p8fW.','p8fX.','p8fY.','p8fZ.','p8fa.','p8fb.','p8fc.','p8fd.',
+												'p8fe.','p8ff.','p8fg.','p8fh.','p8fi.','p8fj.','p8fk.','p8fl.','p8fm.','p8fn.','p8fo.','p8fp.',
+												'p8fq.','p8fr.','p8fs.','p8ft.','p8fu.','p8fv.','p8fw.','p8fx.','p8fy.','p8fz.','p8g..','p8g1.',
+												'p8g2.','p8g3.','p8g4.','p8g5.','p8g6.','p8g7.','p8g8.','p8g9.','p8gA.','p8gB.','p8gC.','p8gD.',
+												'p8gE.','p8gF.','p8gG.','p8gH.','p8gI.','p8gJ.','p8gK.','p8gL.','p8gM.','p8gN.','p8gO.','p8gP.',
+												'p8gQ.','p8gR.','p8gS.','p8gT.','p8gU.','p8gV.','p8gW.','p8gX.','p8gY.','p8gZ.','p8ga.','p8gb.',
+												'p8gc.','p8gd.','p8ge.','p8gf.','p8gg.','p8gh.','p8gi.','p8gj.','p8gk.','p8gl.','p8gm.','p8gn.',
+												'p8go.','p8gp.','p8gq.','p8gr.','p8gs.','p8gt.','p8gu.','p8gv.','p8gw.','p8gx.','p8gy.','p8gz.',
+												'p8h..','p8h1.','p8h2.','p8h3.','p8h4.','p8h5.','p8h6.','p8h7.','p8h8.','p8h9.','p8hA.','p8hB.',
+												'p8hC.','p8hD.','p8hE.','p8hF.','p8hG.','p8hH.','p8hI.','p8hJ.','p8hK.','p8hL.','p8hM.','p8hN.',
+												'p8hO.','p8hQ.','p8hR.','p8hS.','p8hT.','p8hU.','p8hV.','p8hW.','p8hX.','p8hY.','p8hZ.','p8ha.',
+												'p8hb.','p8hc.','p8hd.','p8he.','p8hf.','p8hg.','p8hh.','p8hi.','p8hx.','p8hy.','p8hz.','p8i..',
+												'p8i1.','p8i2.','p8i3.','p8i4.','p8i5.','p8i6.','p8i7.','p8i8.','p8i9.','p8iA.','p8iB.','p8iC.',
+												'p8iD.','p8iE.','p8iF.','p8iG.','p8iH.','p8iI.','p8iJ.','p8iK.','p8iL.','p8iM.','p8iN.','p8iO.',
+												'p8iP.','p8iQ.','p8iR.','p8iS.','p8iT.','p8iU.','p8iV.','p8iW.','p8iX.','p8iY.','p8iZ.','p8ia.',
+												'p8ib.','p8ic.','p8id.','p8ie.','p8if.','p8ig.','p8ih.','p8ii.','p8ij.','p8ik.','p8il.','p8im.',
+												'p8in.','p8io.','p8ip.','p8iq.','p8ir.','p8is.','p8it.','p8iu.','p8iv.','p8iw.','p8ix.','p8iy.',
+												'p8iz.','p8j..','p8j1.','p8j2.','p8j3.','p8j4.','p8jj.','p8jk.','p8jl.','p8jm.','p8jn.','p8jo.',
+												'p8jp.','p8jq.','p8jr.','p8js.','p8jt.','p8ju.','p8jv.','p8jw.','p8k..','p8k1.','p8k2.','p8k3.',
+												'p8k4.','p8k5.','p8k6.','p8k7.','p8k8.','p8k9.','p8kA.','p8kB.','p8kC.','p8kD.','p8kE.','p8kF.',
+												'p8kG.','p8kH.','p8kK.','p8kL.','p8kM.','p8kN.','p8kO.','p8kP.','p8kU.','p8kV.','p8kW.','p8kX.',
+												'p8kY.','p8kZ.','p8ka.','p8kb.','p8kc.','p8kf.','p8kg.','p8kh.','p8ki.','p8kj.','p8kk.','p8kl.',
+												'p8km.','p8kn.','p8ko.','p8kp.','p8kq.','p8kr.','p8ks.','p8kt.','p8ku.','p8kv.','p8kw.','p8kx.',
+												'p8ky.','p8kz.','p8l..','p8l1.','p8l2.','p8l3.','p8l4.','p8l5.','p8l6.','p8l7.','p8l8.','p8l9.',
+												'p8lA.','p8lB.','p8lC.','p8lD.','p8lE.','p8lF.','p8lH.','p8lI.','p8lJ.','p8lK.','p8lL.','p8lM.',
+												'p8lN.','p8lO.','p8lP.','p8lQ.','p8lR.','p8lS.','p8lT.','p8lU.','p8lV.','p8lW.','p8lX.','p8lY.',
+												'p8lZ.','p8la.','p8lb.','p8lc.','p8ld.','p8le.','p8lf.','p8lg.','p8lh.','p8li.','p8lj.','p8lk.',
+												'p8ll.','p8lm.','p8ln.','p8lo.','p8lp.','p8lq.','p8m..','p8m6.','p8m7.','p8m8.','p8m9.','p8mA.',
+												'p8mB.','p8mC.','p8mD.','p8mE.','p8mF.','p8mG.','p8mH.','p8mI.','p8mJ.','p8mK.','p8mL.','p8mM.',
+												'p8mN.','p8mO.','p8mP.','p8mQ.','p8mR.','p8mS.','p8mT.','p8mU.','p8mV.','p8mW.','p8mX.','p8mY.',
+												'p8mZ.','p8ma.','p8mb.','p8mc.','p8mi.','p8mj.','p8mk.','p8ml.','p8mm.','p8mn.','p8n..','p8n7.',
+												'p8o..','pv...','pv1..','pv11.','pv12.','pv13.','pv14.','pv15.','pv16.','pv17.','pv18.','pv19.',
+												'pv1A.','pv1B.','pv1C.','pv1D.','pv1E.','pv2..','pv21.','pv22.','pv23.','pv24.','pv25.','pv26.',
+												'pv27.','pv28.','pv29.','pv2A.','pv2B.','pv2C.','pv2D.','pv2E.','pv3..','pv31.','pv32.','pv33.',
+												'pv34.','pv35.','pv36.','pv37.','pv38.','pv39.','pv3A.','pv3B.','pv3C.','pv3D.','pv3E.','pv4..',
+												'pv41.','pv42.','pv43.','pv44.','pv45.','pv46.','pv47.','pv48.','pv49.','pv4A.','pv4B.','pv4C.',
+												'pv4D.','pv4E.','pv4F.','pv4G.','pv4H.','pv4I.','pv4J.','pv4K.','pv4L.','pv5..','pv51.','pv52.',
+												'pv53.','pv54.','pv55.','pv56.','pv57.','pv6..','pv61.','pv62.','pv63.','pv64.','pv65.','pv66.',
+												'pv67.','pv68.','pv69.','pv6A.','pv6B.','pv6C.','pv6D.','pv6E.','pv6F.','pv6G.','pv6H.','pv6I.',
+												'pv6J.','pv6K.','pv6L.','pv6M.','pv6N.','pv6O.','pv6P.','pv6Q.','pv6R.','pv6S.','pv6T.','pv6U.',
+												'pv6V.','pv6W.','px...','px1..','px11.','px12.','px13.','px14.','px15.','px16.','px17.','px18.',
+												'px19.','px1a.','px1b.','px1c.','px1d.','px1e.','px1f.','px1g.','px2..','px21.','py...','py1..',
+												'py11.','py12.','py13.','py14.','py15.','py16.','py17.','py18.','py19.','py1A.','py1B.','py1C.',
+												'py3..','py31.','py32.','py33.','py34.','py35.','py36.','py4..','py41.','py42.','py43.','py44.',
+												'pz...','pz1..','pz11.','pz12.','pz13.','pz14.','pz2..','pz21.','pz22.','pz23.','pz24.','q5p1.',
+												'q8D5.','q8D6.','q8D7.','q8D8.','q8D9.','q8f1.','q8f2.','q8f3.','q8h2.','q8q8.'
+												))				
+				SELECT coh.ALF_PE,
+						coh.PABX_STR,
+						min(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_PABX_COH3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+								WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE,
+							coh.PABX_STR;		
+				
+Commit;					
+
+/* Update cohort3 table with the prior catheter date */
+
+ALTER TABLE SAILW1169V.VB_PABX_COH3
+	ADD COLUMN FIRST_CATHETER_DT DATE
+	ADD COLUMN CATHETER INTEGER;
+
+MERGE INTO SAILW1169V.VB_PABX_COH3 AS coh
+	USING SESSION.VB_COHORT_EVENT_CATHETER AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+		AND coh.PABX_STR = gpev.PABX_STR
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.FIRST_CATHETER_DT = gpev.CATH_DT
+			;
+
+UPDATE SAILW1169V.VB_PABX_COH3
+	SET CATHETER = CASE WHEN FIRST_CATHETER_DT IS NOT NULL
+					THEN 1
+				ELSE 0
+			END;
+		
+----------------------------------------------------------------------------------------------------------
+-- Add flag to identify if there is another pAbx within 12 months of first Abx start date
+
+ALTER TABLE SAILW1169V.VB_PABX_COH3
+ADD COLUMN PABX_12_MONTHS INTEGER;
+
+UPDATE SAILW1169V.VB_PABX_COH3 AS coh
+SET PABX_12_MONTHS = 1
+WHERE coh.ALF_PE||coh.FIRST_ABX IN 
+	(SELECT ALF_PE||FIRST_ABX FROM
+	(SELECT coh.ALF_PE, coh.PABX_STR, coh.FIRST_ABX, abx.ALT_STR_DT_COMB, abx.ALT_END_DT_COMB FROM SAILW1169V.VB_PABX_COH3 AS coh
+		LEFT JOIN SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE AS abx
+		ON coh.ALF_PE = abx.ALF_PE
+		WHERE coh.FIRST_ABX > abx.ALT_END_DT_COMB 
+		AND	MONTHS_BETWEEN(coh.FIRST_ABX,abx.ALT_END_DT_COMB) < 12
+		ORDER BY coh.ALF_PE));
+	
+UPDATE SAILW1169V.VB_PABX_COH3 AS coh
+SET PABX_12_MONTHS = CASE WHEN PABX_12_MONTHS IS NULL THEN 0
+						ELSE PABX_12_MONTHS
+							END;
+
+------------------------------------------------------------------------------------------------------------------------------------------------
+--CREATE cohort 3 table
+						
+CREATE TABLE SAILW1169V.VB_COHORT3 AS
+(SELECT * FROM SAILW1169V.VB_PABX_COH3)
+WITH NO DATA;
+
+INSERT INTO SAILW1169V.VB_COHORT3
+SELECT *
+FROM SAILW1169V.VB_PABX_COH3
+	WHERE AGE_MET = 1
+	AND STUDY_PERIOD_FG = 1
+	AND IN_GP_FG = 1
+	AND GP_18_MONTHS = 1
+	AND PREG = 0
+	AND CATHETER = 0
+	AND PABX_12_MONTHS = 0;
+
+DELETE FROM 
+	(SELECT ROWNUMBER()	OVER(PARTITION BY ALF_PE ORDER BY PABX_STR) AS rn
+			FROM SAILW1169V.VB_COHORT3) AS mqo
+			WHERE rn > 1;
+	
+-------------------------------------------------------------------------------------------------------------------------------------------------
+			
+--update cohort table with ethnicity
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_ETHNICITY AS (
+	SELECT	ALF_PE, 
+			ETHN_EC_ONS_CODE
+		FROM SAILW1169V.ETHN_1169_PREP_DATE)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_ETHNICITY
+							(ALF_PE,
+							ETHN_EC_ONS_CODE)
+					WITH CTE AS 
+						(SELECT eth.ALF_PE, 
+								max(eth.ETHN_DATE) AS ETHN_DATE
+						FROM SAILW1169V.ETHN_1169_PREP_DATE AS eth
+							RIGHT JOIN SAILW1169V.VB_COHORT3 AS coh
+							ON eth.ALF_PE = coh.ALF_PE
+							WHERE eth.ETHN_DATE < coh.PABX_STR
+						GROUP BY eth.ALF_PE)
+				SELECT eth2.ALF_PE,
+						eth2.ETHN_EC_ONS_CODE
+					FROM SAILW1169V.ETHN_1169_PREP_DATE AS eth2
+						RIGHT JOIN CTE
+							ON eth2.ALF_PE = CTE.ALF_PE
+							AND eth2.ETHN_DATE = CTE.ETHN_DATE;
+				
+Commit;
+
+--delete duplicate rows where the same ethnicity is recorded in both rows
+
+DELETE FROM 
+	(SELECT ROWNUMBER()	OVER(PARTITION BY ALF_PE, ETHN_EC_ONS_CODE) AS rn
+			FROM SESSION.VB_COHORT_ETHNICITY) AS mqo
+			WHERE rn > 1;
+
+--delete all rows for person where a different ethnicity is recorded on the same date
+
+DELETE FROM SESSION.VB_COHORT_ETHNICITY AS eth
+WHERE EXISTS (SELECT ALF_PE, ALF_COUNT
+		FROM (SELECT ALF_PE, COUNT(ALF_PE) AS ALF_COUNT
+			FROM SESSION.VB_COHORT_ETHNICITY
+			GROUP BY ALF_PE
+			HAVING COUNT(ALF_PE)>1) AS dup
+		WHERE eth.ALF_PE = dup.ALF_PE);
+
+/* Update cohort3 table with ethnicity */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN ETHNIC INTEGER;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_ETHNICITY AS eth
+		ON coh.ALF_PE = eth.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.ETHNIC = eth.ETHN_EC_ONS_CODE
+			;
+			
+-----------------------------------------------------------------------------------------
+--SMOKING ALGORITHM BELOW UPDATED BY VB 20/02/2023
+--Adjustments made so that if a smoking status mismacth occurs on the same day then it is set to 'Unclear' as agreed with LS
+
+-----------------------------------------------------------
+--smoking algorithm
+--BY:       s.j.aldridge@swansea.ac.uk
+--aim:      to get smoking cohort ready
+-----------------------------------------------------------
+
+-- This is an algorithm to assign smoker status of your ALFs of interest using
+-- a built in classification table based off of the individuals GP records
+-- The smoker statuses are N - Never smoker, E - ex-smoker and S - current smoker
+-- A detailed documentation of instructions can be found in the README of the Smoking_algorithm repository
+
+
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+---------------------------- declare variables --------------------------------
+
+---define variables here:
+
+-- STEP 1 --
+	-- find and replace all instances of "nnnn" to your project code (e.g. 1234)
+	-- using ctrl + f
+
+
+-- STEP 2 --
+--	create a user table specifying your ALF_PEs, their diagnosis dates (DIAG_DATE).
+
+------------Change from temp to proper table-----
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.VB_COHORT_ALF_DATE');
+
+CREATE TABLE SAILW1169V.VB_COHORT_ALF_DATE
+	(	ALF_PE VARCHAR(20),
+		DIAG_DATE DATE);
+
+INSERT INTO SAILW1169V.VB_COHORT_ALF_DATE
+	SELECT	coh.ALF_PE,
+			coh.PABX_STR
+		FROM SAILW1169V.VB_COHORT3 AS coh
+;
+
+--	An example code for creating this table can be found in the example folder
+CREATE OR REPLACE ALIAS SAILW1169V.input_USER_table FOR SAILW1169V.VB_COHORT_ALF_DATE; -- change to user table
+
+-- STEP 3 --
+	--- Specify your GP table
+	--- This algorithm will expand your input table to obtain the necessary details needed to run the algorithm, these
+	--- are sourced from a GP table. Please specify the table you'd like to use.
+CREATE OR REPLACE ALIAS SAILW1169V.gp_database FOR SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301; 
+
+
+-- STEP 4 --
+	--- Specify your ALF format
+	--- The DEFAULT is ALF_PE, but if yours is different, please REPLACE all "ALF_PE" with your format
+	
+
+-- STEP 5 --
+	-- specify for which timepoint you want your smoker status to be assigned at,
+	-- smoker status at point of diagnosis, up until a defined cut-off date (STEP 4)
+	-- is the default.
+	-- OPTION 1 - gives smoker-status at your specified cut-off date, regardless of diagnosis date
+	-- OPTION 2 - gives smoker_status between diagnosis date and your cut-off date
+	-- OPTION 3 - gives most recent smoker status with cut-off applied to DIAG_DATE
+	--			- gives smoker status after DIAG_DATE (if using DIAG_DATE as your cut-off i.e. NULL setting from STEP 4)
+	-- See the readme for details and instructions on how to implement each option.
+
+
+-- STEP 6 --
+	--- Specify your cutoff date (formatted as 'YYYY-MM-DD'): un-comment 6b and replace it with your date,
+	--- or use 6a with 'NULL' to obtain smoker status at the point of diagnosis.
+	--- NULL is the DEFAULT setting
+	--6a
+CREATE OR REPLACE VARIABLE SAILW1169V.input_smoking_date_cutoff VARCHAR(100) DEFAULT 'NULL';
+	--6b
+-- CREATE OR REPLACE VARIABLE SAILW1169V.input_smoking_date_cutoff VARCHAR(100) DEFAULT 'NULL';
+
+
+-- STEP 7 --
+	--- assign time since last smoker recording until you are happy to classify as 'ex-smoker' in days. i.e. an individual can't have
+	---	been recorded a smoker for at least this period of time in the run up to the cut-off date for the algorithm to assign
+	--- them as an ex-smoker
+	--- DEFAULT is 180 days - approx 6 months
+CREATE OR REPLACE VARIABLE SAILW1169V.ex_smoker_cutoff INTEGER DEFAULT 540;
+
+
+-- STEP 8 --
+	---desired ALF_STS_CDs - specify the ALF STS codes wanted for inclusion, default is 1, 4 and 39.
+	---If you want more codes included, add the values to this table
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.ALF_STS_CD_SMOKING');
+CREATE TABLE SAILW1169V.ALF_STS_CD_SMOKING
+	(ALF_STS_CD	BIGINT);
+COMMIT;
+INSERT INTO SAILW1169V.ALF_STS_CD_SMOKING
+VALUES (1), (4), (39); -- remove or add additional codes to this line using the same format
+COMMIT;
+SELECT * FROM SAILW1169V.ALF_STS_CD_SMOKING;
+
+
+-- STEP 9 --
+	--- The read codes for smoker status have been determined in the development of this algorithm and do not require input.
+	--- *However*, if you'd like to edit this table, do so in the section titled "Create look up table".
+	--- If you'd like to supply a new table of your own, comment out the "Create look up table" section and insert a reference to your own table below
+-- CREATE OR REPLACE ALIAS SAILW1169V.SMOKER_LOOKUP FOR SAILW1169V.YOUR_LOOK_UP_TABLE_GOES_HERE;
+
+
+-- STEP 10 --
+	-- Select all (Ctrl A) and run this algorithm (right click, execute --> Execute SQL script)
+
+
+-- STEP 11 --
+	-- results are generated to the output table SAILW1169V.VB_SMOKER_OUTPUT and feature
+	-- the PATIENT_ID, SMOKER STATUS and SMOKER STATUS DESCRIPTION
+	
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-------------------------- Create look up table --------------------------------
+
+-- This is an updated list of read codes put together by SA based on the codes published by MH,
+-- and with the guidance of AA, FT and RL (June 2021)
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.SMOKER_LOOKUP');
+
+CREATE TABLE sailW1169V.smoker_lookup
+(
+        sm_code         CHAR(6),
+        description		VARCHAR(300),
+        smoking_status  VARCHAR(1),
+        complexity		VARCHAR(20)
+)
+DISTRIBUTE BY HASH (sm_code); --previously was best practise, but might be outdated now
+COMMIT;
+
+--granting access to team mates
+GRANT ALL ON TABLE SAILW1169V.SMOKER_LOOKUP TO ROLE NRDASAIL_SAIL_1169_ANALYST;
+
+--worth doing for large chunks of data
+alter table SAILW1169V.SMOKER_LOOKUP activate not logged INITIALLY;
+
+--inserting read codes relevent to smoking
+insert into SAILW1169V.SMOKER_LOOKUP
+	(sm_code, description, smoking_status, complexity)
+VALUES
+	('1371.'	,	'Never smoked tobacco'											,	'N'	,	'SIMPLE'	)	,
+	('1372.'	,	'Trivial smoker - < 1 cig/day'									,	'S'	,	'SIMPLE'	)	,
+	('1373.'	,	'Light smoker - 1-9 cigs/day'									,	'S'	,	'SIMPLE'	)	,
+	('1374.'	,	'Moderate smoker - 10-19 cigs/d'								,	'S'	,	'SIMPLE'	)	,
+	('1375.'	,	'Heavy smoker - 20-39 cigs/day'									,	'S'	,	'SIMPLE'	)	,
+	('1376.'	,	'Very heavy smoker - 40+cigs/d'									,	'S'	,	'SIMPLE'	)	,
+	('1377.'	,	'Ex-trivial smoker (<1/day)'									,	'E'	,	'SIMPLE'	)	,
+	('1378.'	,	'Ex-light smoker (1-9/day)'										,	'E'	,	'SIMPLE'	)	,
+	('1379.'	,	'Ex-moderate smoker (10-19/day)'								,	'E'	,	'SIMPLE'	)	,
+	('6791.'	,	'Health ed. - smoking'											,	'S'	,	'SIMPLE'	)	,
+	('67910'	,	'Health education - parental smoking'							,	'S'	,	'SIMPLE'	)	,
+	('137..'	,	'Tobacco consumption'											,	'S'	,	'EVENT_VAL DEPENDENT'	),
+	('137A.'	,	'Ex-heavy smoker (20-39/day)'									,	'E'	,	'SIMPLE'	)	,
+	('137a.'	,	'Pipe tobacco consumption'										,	'S'	,	'SIMPLE'	)	,
+	('137B.'	,	'Ex-very heavy smoker (40+/day)'								,	'E'	,	'SIMPLE'	)	,
+	('137b.'	,	'Ready to stop smoking'											,	'S'	,	'SIMPLE'	)	,
+	('137C.'	,	'Keeps trying to stop smoking'									,	'S'	,	'SIMPLE'	)	,
+	('137c.'	,	'Thinking about stopping smoking'								,	'S'	,	'SIMPLE'	)	,
+	('137D.'	,	'Admitted tobacco cons untrue ?'								,	'S'	,	'SIMPLE'	)	,
+	('137d.'	,	'Not interested in stopping smoking'							,	'S'	,	'SIMPLE'	)	,
+	('137e.'	,	'Smoking restarted'												,	'S'	,	'SIMPLE'	)	,
+	('137E.'	,	'Tobacco consumption unknown'									,	'S'	,	'EVENT_VAL DEPENDENT'	),
+	('137F.'	,	'Ex-smoker - amount unknown'									,	'E'	,	'SIMPLE'	)	,
+	('137f.'	,	'Reason for restarting smoking'									,	'S'	,	'SIMPLE'	)	,
+	('137G.'	,	'Trying to give up smoking'										,	'S'	,	'SIMPLE'	)	,
+	('137g.'	,	'Cigarette pack-years'											,	'S'	,	'EVENT_VAL DEPENDENT'	),
+	('137h.'	,	'Minutes from waking to first tobacco consumption'				,	'S'	,	'SIMPLE'	)	,
+	('137H.'	,	'Pipe smoker'													,	'S'	,	'SIMPLE'	)	,
+	('137j.'	,	'Ex-cigarette smoker'											,	'E'	,	'SIMPLE'	)	,
+	('137J.'	,	'Cigar smoker'													,	'S'	,	'SIMPLE'	)	,
+	('137K.'	,	'Stopped smoking'												,	'E'	,	'SIMPLE'	)	,
+	('137K0'	,	'Recently stopped smoking'										,	'E'	,	'SIMPLE'	)	,
+	('137l.'	,	'Ex roll-up cigarette smoker'									,	'E'	,	'SIMPLE'	)	,
+	('137L.'	,	'Current non-smoker'											,	'N'	,	'SIMPLE'	)	,
+	('137m.'	,	'Failed attempt to stop smoking'								,	'S'	,	'SIMPLE'	)	,
+	('137M.'	,	'Rolls own cigarettes'                                 			,	'S'	,	'SIMPLE'	)	,
+	('137N.'	,	'Ex pipe smoker'                                        		,	'E'	,	'SIMPLE'	)	,
+	('137O.'	,	'Ex cigar smoker'                                               ,	'E'	,	'SIMPLE'	)	,
+	('137P.'	,	'Cigarette smoker'                                    			,	'S'	,	'SIMPLE'	)	,
+	('137Q.'	,	'Smoking started'                                               ,	'S'	,	'SIMPLE'	)	,
+	('137R.'	,	'Current smoker'                                                ,	'S'	,	'SIMPLE'	)	,
+	('137S.'	,	'Ex smoker'                                                     ,	'E'	,	'SIMPLE'	)	,
+	('137T.'	,	'Date ceased smoking'                                           ,	'E'	,	'SIMPLE'	)	,
+	('137V.'	,	'Smoking reduced'                                               ,	'S'	,	'SIMPLE'	)	,
+	('137X.'	,	'Cigarette consumption'                                         ,	'S'	,	'EVENT_VAL DEPENDENT'	)	,
+	('137Y.'	,	'Cigar consumption'                                             ,	'S'	,	'EVENT_VAL DEPENDENT'	)	,
+	('137Z.'	,	'Tobacco consumption NOS'                                       ,	'S'	,	'EVENT_VAL DEPENDENT'	)	,
+	('13cA.'	,	'Smokes drugs'													,	'S'	,	'SIMPLE'	)	,
+	('13p..'	,	'Smoking cessation milestones'                                  ,	'S'	,	'SIMPLE'	)	,
+	('13p0.'	,	'Negotiated date for cessation of smoking'	                    ,	'S'	,	'SIMPLE'	)	,
+	('13p4.'	,	'Smoking free weeks'                                            ,	'E'	,	'SIMPLE'	)	,
+	('13p5.'	,	'Smoking cessation programme start date'	                	,	'S'	,	'SIMPLE'	)	,
+	('13p50'	,	'Practice based smoking cessation programme start date'         ,	'S'	,	'SIMPLE'	)	,
+	('13p8.'	,	'Lost to smok cessation fllw-up'                                ,	'S'	,	'SIMPLE'	)	,
+	('1V08.'	,	'Smokes drugs in cigarette form'								,	'S'	,	'SIMPLE'	)	,
+	('1V09.'	,	'Smokes drugs through a pipe'									,	'S'	,	'SIMPLE'	)	,
+	('38DH.'	,	'Fagerstrom test for nicotine dependence'	                    ,	'S'	,	'SIMPLE'	)	,
+	('67A3.'	,	'Pregnancy smoking advice'                                      ,	'S'	,	'SIMPLE'	)	,
+	('67H1.'	,	'Lifestyle advice regarding smoking'	                        ,	'S'	,	'SIMPLE'	)	,
+	('67H6.'	,	'Brief intervention for smoking cessation'	                    ,	'S'	,	'SIMPLE'	)	,
+	('745H.'	,	'Smoking cessation therapy'                                     ,	'S'	,	'SIMPLE'	)	,
+	('745H0'	,	'Nicotine replacement therapy using nicotine patches'	        ,	'S'	,	'SIMPLE'	)	,
+	('745H1'	,	'Nicotine replacement therapy using nicotine gum'	            ,	'S'	,	'SIMPLE'	)	,
+	('745H2'	,	'Nicotine replacement therapy using nicotine inhalator'		    ,	'S'	,	'SIMPLE'	)	,
+	('745H3'	,	'Nicotine replacement therapy using nicotine lozenges'	        ,	'S'	,	'SIMPLE'	)	,
+	('745H4'	,	'Smoking cessation drug therapy'                                ,	'S'	,	'SIMPLE'	)	,
+	('745H5'	,	'Varenicline therapy'                                           ,	'S'	,	'SIMPLE'	)	,
+	('745Hy'	,	'Other specified smoking cessation therapy'		                ,	'S'	,	'SIMPLE'	)	,
+	('745Hz'	,	'Smoking cessation therapy NOS'                                 ,	'S'	,	'SIMPLE'	)	,
+	('8B2B.'	,	'Nicotine replacement therapy'                                  ,	'S'	,	'SIMPLE'	)	,
+	('8B2B0'	,	'Issue of nicotine replacement therapy voucher'					,	'S'	,	'SIMPLE'	)	,
+	('8B31G'	,	'Varenicline smoking cessation therapy offered'					,	'S'	,	'SIMPLE'	)	,
+	('8B3f.'	,	'Nicotine replacement therapy provided free'	                ,	'S'	,	'SIMPLE'	)	,
+	('8B3Y.'	,	'Over the counter nicotine replacement therapy'		            ,	'S'	,	'SIMPLE'	)	,
+	('8BP3.'	,	'Nicotine replacement therapy provided by community pharmacis'	,	'S'	,	'SIMPLE'	)	,
+	('8BPh.'	,	'Bupropion therapy'												,	'S'	,	'SIMPLE'	)	,
+	('8CAg.'	,	'Smoking cessation advice provided by community pharmacist'		,	'S'	,	'SIMPLE'	)	,
+	('8CAL.'	,	'Smoking cessation advice'                                      ,	'S'	,	'SIMPLE'	)	,
+	('8CdB.'	,	'Stop smoking service opportunity signposted'	                ,	'S'	,	'SIMPLE'	)	,
+	('8H7i.'	,	'Referral to smoking cessation advisor'		                    ,	'S'	,	'SIMPLE'	)	,
+	('8HBM.'	,	'Stop smoking face to face follow-up'	                        ,	'S'	,	'SIMPLE'	)	,
+	('8HBP.'	,	'Smoking cessation 12 week follow-up'							,	'S'	,	'SIMPLE'	)	,
+	('8HkQ.'	,	'Referral to NHS stop smoking service'	                        ,	'S'	,	'SIMPLE'	)	,
+	('8HTK.'	,	'Referral to stop-smoking clinic'	                            ,	'S'	,	'SIMPLE'	)	,
+	('8I2I.'	,	'Nicotine replacement therapy contraindicated'	                ,	'S'	,	'SIMPLE'	)	,
+	('8I2J.'	,	'Bupropion contraindicated'                                     ,	'S'	,	'SIMPLE'	)	,
+	('8I39.'	,	'Nicotine replacement therapy refused'	                        ,	'S'	,	'SIMPLE'	)	,
+	('8I3M.'	,	'Bupropion refused'                                             ,	'S'	,	'SIMPLE'	)	,
+	('8I6H.'	,	'Smoking review not indicated'                                  ,	'S'	,	'SIMPLE'	)	,
+	('8IAj.'	,	'Smoking cessation advice declined'		                        ,	'S'	,	'SIMPLE'	)	,
+	('8IEK.'	,	'Smoking cessation programme declined'	                        ,	'S'	,	'SIMPLE'	)	,
+	('8IEM.'	,	'Smoking cessation drug therapy declined'	                    ,	'S'	,	'SIMPLE'	)	,
+	('8IEM0'	,	'Varenicline smoking cessation therapy declined'				,	'S'	,	'SIMPLE'	)	,
+	('8IEo.'	,	'Referral to smoking cessation service declined'				,	'S'	,	'SIMPLE'	)	,
+	('8T08.'	,	'Referral to smoking cessation service'							,	'S'	,	'SIMPLE'	)	,
+	('9hG..'	,	'Exception reporting: smoking quality indicators'	            ,	'S'	,	'SIMPLE'	)	,
+	('9hG0.'	,	'Excepted from smoking quality indicators: Patient unsuitable'	,	'S'	,	'SIMPLE'	)	,
+	('9hG1.'	,	'Excepted from smoking quality indicators: Informed dissent'	,	'S'	,	'SIMPLE'	)	,
+	('9kc..'	,	'Smoking cessation - enhanced services administration'	        ,	'S'	,	'SIMPLE'	)	,
+	('9kc0.'	,	'Smoking cessatn monitor template complet - enhanc serv admin'	,	'S'	,	'SIMPLE'	)	,
+	('9km..'	,	'Ex-smoker annual review - enhanced services administration'	,	'E'	,	'SIMPLE'	)	,
+	('9kn..'	,	'Non-smoker annual review - enhanced services administration'	,	'N'	,	'SIMPLE'	)	,
+	('9ko..'	,	'Current smoker annual review - enhanced services admin'	    ,	'S'	,	'SIMPLE'	)	,
+	('9N2k.'	,	'Seen by smoking cessation advisor'		                        ,	'S'	,	'SIMPLE'	)	,
+	('9N4M.'	,	'DNA - Did not attend smoking cessation clinic'		            ,	'S'	,	'SIMPLE'	)	,
+	('9Ndf.'	,	'Consent given for follow-up by smoking cessation team'			,	'S'	,	'SIMPLE'	)	,
+	('9Ndg.'	,	'Declined consent for follow-up by smoking cessation team'	    ,	'S'	,	'SIMPLE'	)	,
+	('9NdV.'	,	'Consent given follow-up after smoking cessation intervention'	,	'S'	,	'SIMPLE'	)	,
+	('9NdW.'	,	'Consent given for smoking cessation data sharing'	            ,	'S'	,	'SIMPLE'	)	,
+	('9NdY.'	,	'Declin cons follow-up evaluation after smoking cess interven'	,	'S'	,	'SIMPLE'	)	,
+	('9NdZ.'	,	'Declined consent for smoking cessation data sharing'	        ,	'S'	,	'SIMPLE'	)	,
+	('9NS02'	,	'Referral for smoking cessation service offered'	            ,	'S'	,	'SIMPLE'	)	,
+	('9OO..'	,	'Anti-smoking monitoring admin.'                                ,	'S'	,	'SIMPLE'	)	,
+	('9OO1.'	,	'Attends stop smoking monitor.'                                 ,	'S'	,	'SIMPLE'	)	,
+	('9OO2.'	,	'Refuses stop smoking monitor'                                  ,	'S'	,	'SIMPLE'	)	,
+	('9OO3.'	,	'Stop smoking monitor default'                                  ,	'S'	,	'SIMPLE'	)	,
+	('9OO4.'	,	'Stop smoking monitor 1st lettr'                                ,	'S'	,	'SIMPLE'	)	,
+	('9OO5.'	,	'Stop smoking monitor 2nd lettr'                                ,	'S'	,	'SIMPLE'	)	,
+	('9OO6.'	,	'Stop smoking monitor 3rd lettr'                                ,	'S'	,	'SIMPLE'	)	,
+	('9OO7.'	,	'Stop smoking monitor verb.inv.'                                ,	'S'	,	'SIMPLE'	)	,
+	('9OO8.'	,	'Stop smoking monitor phone inv'                                ,	'S'	,	'SIMPLE'	)	,
+	('9OO9.'	,	'Stop smoking monitoring delete'                                ,	'S'	,	'SIMPLE'	)	,
+	('9OOA.'	,	'Stop smoking monitor.chck done'                                ,	'S'	,	'SIMPLE'	)	,
+	('9OOB.'	,	'Stop smoking invitation short message service text message'	,	'S'	,	'SIMPLE'	)	,
+	('9OOB0'	,	'Stop smoking invitation first SMS text message'	            ,	'S'	,	'SIMPLE'	)	,
+	('9OOB1'	,	'Stop smoking invitation second SMS text message'	            ,	'S'	,	'SIMPLE'	)	,
+	('9OOB2'	,	'Stop smoking invitation third SMS text message'	            ,	'S'	,	'SIMPLE'	)	,
+	('9OOZ.'	,	'Stop smoking monitor admin.NOS'                                ,	'S'	,	'SIMPLE'	)	,
+	('du3..'	,	'NICOTINE'                                                      ,	'S'	,	'SIMPLE'	)	,
+	('du31.'	,	'NICOTINE 2mg chewing gum'                                      ,	'S'	,	'SIMPLE'	)	,
+	('du32.'	,	'NICOTINE 4mg chewing gum'                                      ,	'S'	,	'SIMPLE'	)	,
+	('du33.'	,	'NICORETTE 2mg chewing gum'                                     ,	'S'	,	'SIMPLE'	)	,
+	('du34.'	,	'NICORETTE 4mg chewing gum'                                     ,	'S'	,	'SIMPLE'	)	,
+	('du35.'	,	'NICOTINELL TTS 10 patches'                                     ,	'S'	,	'SIMPLE'	)	,
+	('du36.'	,	'NICOTINELL TTS 20 patches'                                     ,	'S'	,	'SIMPLE'	)	,
+	('du37.'	,	'NICOTINELL TTS 30 patches'                                     ,	'S'	,	'SIMPLE'	)	,
+	('du38.'	,	'NICOTINE 7mg/24hours patches'                                  ,	'S'	,	'SIMPLE'	)	,
+	('du39.'	,	'NICOTINE 14mg/24hours patches'                                 ,	'S'	,	'SIMPLE'	)	,
+	('du3a.'	,	'NICORETTE nasal spray'                                         ,	'S'	,	'SIMPLE'	)	,
+	('du3A.'	,	'NICOTINE 21mg/24hours patches'                                 ,	'S'	,	'SIMPLE'	)	,
+	('du3B.'	,	'*NICORETTE 5mg patches x7'                                     ,	'S'	,	'SIMPLE'	)	,
+	('du3b.'	,	'NICOTINE 10mg/mL nasal spray'                                  ,	'S'	,	'SIMPLE'	)	,
+	('du3C.'	,	'*NICORETTE 10mg patches x7'                                    ,	'S'	,	'SIMPLE'	)	,
+	('du3c.'	,	'NICOTINELL ORIGINAL 2mg gum'                                   ,	'S'	,	'SIMPLE'	)	,
+	('du3D.'	,	'*NICORETTE 15mg patches x7'                                    ,	'S'	,	'SIMPLE'	)	,
+	('du3d.'	,	'NICOTINELL MINT 2mg gum'                                       ,	'S'	,	'SIMPLE'	)	,
+	('du3E.'	,	'*NICORETTE 15mg patches x28'                                   ,	'S'	,	'SIMPLE'	)	,
+	('du3e.'	,	'NICOTINE 10mg inhalator starter pack' 		                    ,	'S'	,	'SIMPLE'	)	,
+	('du3f.'	,	'NICOTINE 10mg inhalator refill pack'	                        ,	'S'	,	'SIMPLE'	)	,
+	('du3F.'	,	'NICOTINE 5mg/16hours patches'                                  ,	'S'	,	'SIMPLE'	)	,
+	('du3g.'	,	'NICORETTE 10mg inhalator starter pack'		                    ,	'S'	,	'SIMPLE'	)	,
+	('du3G.'	,	'NICOTINE 10mg/16hours patches'                                 ,	'S'	,	'SIMPLE'	)	,
+	('du3h.'	,	'NICORETTE 10mg inhalator refill pack'	                        ,	'S'	,	'SIMPLE'	)	,
+	('du3H.'	,	'NICOTINE 15mg/16hours patches'                                 ,	'S'	,	'SIMPLE'	)	,
+	('du3i.'	,	'NICOTINELL ORIGINAL 4mg chewing gum'	                        ,	'S'	,	'SIMPLE'	)	,
+	('du3I.'	,	'NIQUITIN CQ 2mg original lozenges'		                        ,	'S'	,	'SIMPLE'	)	,
+	('du3J.'	,	'*NICABATE 7mg patches x14'                                     ,	'S'	,	'SIMPLE'	)	,
+	('du3j.'	,	'NICOTINELL MINT 4mg chewing gum'	                            ,	'S'	,	'SIMPLE'	)	,
+	('du3K.'	,	'*NICABATE 14mg patches x14'                                    ,	'S'	,	'SIMPLE'	)	,
+	('du3k.'	,	'NIQUITIN CQ 7mg/24hours patches'	                            ,	'S'	,	'SIMPLE'	)	,
+	('du3L.'	,	'*NICABATE 21mg patches x14'                                    ,	'S'	,	'SIMPLE'	)	,
+	('du3l.'	,	'NIQUITIN CQ 14mg/24hours patches'	                            ,	'S'	,	'SIMPLE'	)	,
+	('du3M.'	,	'*NICABATE 7mg patches x7'                                      ,	'S'	,	'SIMPLE'	)	,
+	('du3m.'	,	'NIQUITIN CQ 21mg/24hours patches'	                            ,	'S'	,	'SIMPLE'	)	,
+	('du3N.'	,	'*NICABATE 14mg patches x7'                                     ,	'S'	,	'SIMPLE'	)	,
+	('du3n.'	,	'NICOTINE 2mg sublingual tablets'	                            ,	'S'	,	'SIMPLE'	)	,
+	('du3o.'	,	'NICORETTE MICROTAB 2mg sublingual tablets'		                ,	'S'	,	'SIMPLE'	)	,
+	('du3O.'	,	'NIQUITIN CQ 7mg/24hours clear patches'		                    ,	'S'	,	'SIMPLE'	)	,
+	('du3P.'	,	'*NICABATE 21mg patches x7'                                     ,	'S'	,	'SIMPLE'	)	,
+	('du3p.'	,	'*NICOTINE 1mg mint lozenges'                                   ,	'S'	,	'SIMPLE'	)	,
+	('du3Q.'	,	'*NICORETTE 15mg patches x3'                                    ,	'S'	,	'SIMPLE'	)	,
+	('du3q.'	,	'NICOTINELL MINT 1mg lozenges'                                  ,	'S'	,	'SIMPLE'	)	,
+	('du3R.'	,	'*NICONIL-11 patches'                                           ,	'S'	,	'SIMPLE'	)	,
+	('du3r.'	,	'NIQUITIN CQ 14mg/24hours clear patches'	                    ,	'S'	,	'SIMPLE'	)	,
+	('du3S.'	,	'*NICONIL-22 patches'                                           ,	'S'	,	'SIMPLE'	)	,
+	('du3s.'	,	'NIQUITIN CQ 21mg/24hours clear patches'	                    ,	'S'	,	'SIMPLE'	)	,
+	('du3T.'	,	'*NICOTINE 11mg/24hours patches'                                ,	'S'	,	'SIMPLE'	)	,
+	('du3t.'	,	'NICOTINE 2mg fruit chewing gum'                                ,	'S'	,	'SIMPLE'	)	,
+	('du3U.'	,	'*NICOTINE 22mg/24hours patches'                                ,	'S'	,	'SIMPLE'	)	,
+	('du3u.'	,	'NICOTINE 4mg fruit chewing gum'                                ,	'S'	,	'SIMPLE'	)	,
+	('du3V.'	,	'NICORETTE 2mg mint chewing gum'                                ,	'S'	,	'SIMPLE'	)	,
+	('du3v.'	,	'NICOTINE 2mg citrus chewing gum'	                            ,	'S'	,	'SIMPLE'	)	,
+	('du3w.'	,	'NICORETTE CITRUS 2mg chewing gum'	                            ,	'S'	,	'SIMPLE'	)	,
+	('du3W.'	,	'NICORETTE MINT PLUS 4mg chewing gum'	                        ,	'S'	,	'SIMPLE'	)	,
+	('du3x.'	,	'NICOTINE 1mg lozenges'                                         ,	'S'	,	'SIMPLE'	)	,
+	('du3X.'	,	'NICOTINE 2mg mint chewing gum'                                 ,	'S'	,	'SIMPLE'	)	,
+	('du3y.'	,	'NICOTINE 2mg lozenges'                                         ,	'S'	,	'SIMPLE'	)	,
+	('du3Y.'	,	'NICOTINE 4mg mint chewing gum'                                 ,	'S'	,	'SIMPLE'	)	,
+	('du3Z.'	,	'*NICONIL 22 starter pack'                                      ,	'S'	,	'SIMPLE'	)	,
+	('du3z.'	,	'NICOTINE 4mg lozenges'                                         ,	'S'	,	'SIMPLE'	)	,
+	('du6..'	,	'BUPROPION'                                                     ,	'S'	,	'SIMPLE'	)	,
+	('du61.'	,	'ZYBAN 150mg m/r tablets'                                       ,	'S'	,	'SIMPLE'	)	,
+	('du6z.'	,	'BUPROPION HYDROCHLORIDE 150mg m/r tablets'		                ,	'S'	,	'SIMPLE'	)	,
+	('du7..'	,	'NICOTINE 2'                                                    ,	'S'	,	'SIMPLE'	)	,
+	('du71.'	,	'NIQUITIN CQ 4mg original lozenges'		                        ,	'S'	,	'SIMPLE'	)	,
+	('du72.'	,	'NIQUITIN CQ 2mg mint chewing gum'	                            ,	'S'	,	'SIMPLE'	)	,
+	('du73.'	,	'NIQUITIN CQ 4mg mint chewing gum'	                            ,	'S'	,	'SIMPLE'	)	,
+	('du74.'	,	'*NICORETTE 15mg patches x2'                                    ,	'S'	,	'SIMPLE'	)	,
+	('du75.'	,	'NICOTINELL 2mg liquorice chewing gum'	                        ,	'S'	,	'SIMPLE'	)	,
+	('du76.'	,	'NICOTINELL 4mg liquorice chewing gum'	                        ,	'S'	,	'SIMPLE'	)	,
+	('du77.'	,	'NICOTINELL 2mg mint lozenges'                                  ,	'S'	,	'SIMPLE'	)	,
+	('du78.'	,	'NIQUITIN CQ 2mg mint lozenges'                                 ,	'S'	,	'SIMPLE'	)	,
+	('du79.'	,	'NIQUITIN CQ 4mg mint lozenges'                                 ,	'S'	,	'SIMPLE'	)	,
+	('du7A.'	,	'NICORETTE FRESHMINT 2mg chewing gum'	                        ,	'S'	,	'SIMPLE'	)	,
+	('du7a.'	,	'NICOTINELL ICEMINT 4mg chewing gum'	                        ,	'S'	,	'SIMPLE'	)	,
+	('du7b.'	,	'NICORETTE 15mg inhalator'                                      ,	'S'	,	'SIMPLE'	)	,
+	('du7B.'	,	'NICORETTE FRESHMINT 4mg chewing gum'	                        ,	'S'	,	'SIMPLE'	)	,
+	('du7c.'	,	'NICOTINE 15mg inhalator'                                       ,	'S'	,	'SIMPLE'	)	,
+	('du7C.'	,	'NICOTINELL CLASSIC 2mg chewing gum'	                        ,	'S'	,	'SIMPLE'	)	,
+	('du7d.'	,	'NICASSIST 7mg/24hours patches'                                 ,	'S'	,	'SIMPLE'	)	,
+	('du7D.'	,	'NICOTINELL CLASSIC 4mg chewing gum'	                        ,	'S'	,	'SIMPLE'	)	,
+	('du7e.'	,	'NICASSIST 14mg/24hours patches'                                ,	'S'	,	'SIMPLE'	)	,
+	('du7E.'	,	'NICORETTE FRESHFRUIT 2mg chewing gum'	                        ,	'S'	,	'SIMPLE'	)	,
+	('du7f.'	,	'NICASSIST 21mg/24hours patches'                                ,	'S'	,	'SIMPLE'	)	,
+	('du7F.'	,	'NICORETTE FRESHFRUIT 4mg chewing gum'	                        ,	'S'	,	'SIMPLE'	)	,
+	('du7G.'	,	'*NICOPATCH 7mg/24hours patches'                                ,	'S'	,	'SIMPLE'	)	,
+	('du7g.'	,	'NICORETTE COOLS 2mg lozenges'                                  ,	'S'	,	'SIMPLE'	)	,
+	('du7H.'	,	'NICOPATCH 14mg/24hours patches'	                            ,	'S'	,	'SIMPLE'	)	,
+	('du7h.'	,	'NICORETTE COOLS 4mg lozenges'                                  ,	'S'	,	'SIMPLE'	)	,
+	('du7I.'	,	'NICOPATCH 21mg/24hours patches'	                            ,	'S'	,	'SIMPLE'	)	,
+	('du7i.'	,	'NIQUITIN PRE-QUIT 21mg/24 hours clear patches'		            ,	'S'	,	'SIMPLE'	)	,
+	('du7J.'	,	'NICOPASS 1.5mg fresh mint lozenges'	                        ,	'S'	,	'SIMPLE'	)	,
+	('du7j.'	,	'NICORETTE FRUITFUSION 2mg chewing gum'		                    ,	'S'	,	'SIMPLE'	)	,
+	('du7K.'	,	'NICOPASS 1.5mg liquorice mint lozenges'	                    ,	'S'	,	'SIMPLE'	)	,
+	('du7k.'	,	'NICORETTE FRUITFUSION 4mg chewing gum'		                    ,	'S'	,	'SIMPLE'	)	,
+	('du7l.'	,	'NICORETTE FRUITFUSION 6mg chewing gum'		                    ,	'S'	,	'SIMPLE'	)	,
+	('du7L.'	,	'NIQUITIN PRE-QUIT 4mg mint lozenges'	                        ,	'S'	,	'SIMPLE'	)	,
+	('du7M.'	,	'NICORETTE INVISI 10mg patches'                                 ,	'S'	,	'SIMPLE'	)	,
+	('du7N.'	,	'NICORETTE INVISI 15mg patches'                                 ,	'S'	,	'SIMPLE'	)	,
+	('du7n.'	,	'NICOTINE 6mg fruit chewing gum'								,	'S'	,	'SIMPLE'	)	,
+	('du7O.'	,	'NICORETTE INVISI 25mg patches'									,	'S'	,	'SIMPLE'	)	,
+	('du7o.'	,	'NICOTINE 4mg icemint chewing gum'								,	'S'	,	'SIMPLE'	)	,
+	('du7P.'	,	'NICORETTE ICY WHITE 2mg chewing gum'							,	'S'	,	'SIMPLE'	)	,
+	('du7p.'	,	'NICOTINE 2mg icemint chewing gum'								,	'S'	,	'SIMPLE'	)	,
+	('du7Q.'	,	'NICORETTE ICY WHITE 4mg chewing gum' 							,	'S'	,	'SIMPLE'	)	,
+	('du7q.'	,	'NICOTINE 1mg oromucosal spray'									,	'S'	,	'SIMPLE'	)	,
+	('du7r.'	,	'NICOTINE 1.5mg cherry lozenges'								,	'S'	,	'SIMPLE'	)	,
+	('du7R.'	,	'NIQUITIN MINIS MINT 1.5mg lozenges'							,	'S'	,	'SIMPLE'	)	,
+	('du7s.'	,	'NICOTINE 4mg cherry lozenges'									,	'S'	,	'SIMPLE'	)	,
+	('du7S.'	,	'NIQUITIN MINIS MINT 4mg lozenges'								,	'S'	,	'SIMPLE'	)	,
+	('du7T.'	,	'NICORETTE MICROTAB LEMON 2mg sublingual tablets'				,	'S'	,	'SIMPLE'	)	,
+	('du7t.'	,	'NICOTINE 15mg/16hours patches and 2mg chewing gum'				,	'S'	,	'SIMPLE'	)	,
+	('du7U.'	,	'NICORETTE COMBI 15mg patches and 2mg chewing gum'				,	'S'	,	'SIMPLE'	)	,
+	('du7u.'	,	'NICOTINE 1.5mg lozenges'										,	'S'	,	'SIMPLE'	)	,
+	('du7v.'	,	'NICOTINE 25mg/16hours patches'									,	'S'	,	'SIMPLE'	)	,
+	('du7V.'	,	'NIQUITIN MINIS 1.5mg cherry lozenges'							,	'S'	,	'SIMPLE'	)	,
+	('du7w.'	,	'NICOTINE 1.5mg fresh mint lozenges'							,	'S'	,	'SIMPLE'	)	,
+	('du7W.'	,	'NIQUITIN MINIS 4mg cherry lozenges'							,	'S'	,	'SIMPLE'	)	,
+	('du7X.'	,	'NICORETTE FRESHMINT 2mg lozenges'								,	'S'	,	'SIMPLE'	)	,
+	('du7x.'	,	'NICOTINE 1.5mg liquorice mint lozenges'						,	'S'	,	'SIMPLE'	)	,
+	('du7Y.'	,	'NICORETTE QUICKMIST 1mg oromucosal spray'						,	'S'	,	'SIMPLE'	)	,
+	('du7y.'	,	'NICOTINE 4mg liquorice chewing gum'							,	'S'	,	'SIMPLE'	)	,
+	('du7z.'	,	'NICOTINE 2mg liquorice chewing gum'							,	'S'	,	'SIMPLE'	)	,
+	('du7Z.'	,	'NICOTINELL ICEMINT 2mg chewing gum'							,	'S'	,	'SIMPLE'	)	,
+	('du8..'	,	'VARENICLINE'													,	'S'	,	'SIMPLE'	)	,
+	('du81.'	,	'CHAMPIX 1mg tablets'											,	'S'	,	'SIMPLE'	)	,
+	('du82.'	,	'CHAMPIX 500microgram tablets'									,	'S'	,	'SIMPLE'	)	,
+	('du83.'	,	'CHAMPIX TREATMENT INITIATION pack'								,  	'S'	,	'SIMPLE'	)	,
+	('du8x.'	,	'VARENICLINE 500micrograms+1mg tablets'							,  	'S'	,	'SIMPLE'	)	,
+	('du8y.'	,	'VARENICLINE 500microgram tablets'								,	'S'	,	'SIMPLE'	)	,
+	('du8z.'	,	'VARENICLINE 1mg tablets'										,	'S'	,	'SIMPLE'	)	,
+	('du9..'	,	'NICOTINE WITHDRAWAL PRODUCTS'									,	'S'	,	'SIMPLE'	)	,
+	('du91.'	,	'NICOBREVIN capsules'											,	'S'	,	'SIMPLE'	)	,
+	('duB1.'	,	'NIQUITIN STRIPS 2.5mg mint oral film'							,	'S'	,	'SIMPLE'	)	,
+	('duB2.'	,	'NIQUITIN MINIS 1.5mg orange lozenges'							,	'S'	,	'SIMPLE'	)	,
+	('duB3.'	,	'NICOTINELL SUPPORT ICEMINT 2mg chewing gum'					,	'S'	,	'SIMPLE'	)	,
+	('duB4.'	,	'NICOTINELL SUPPORT ICEMINT 4mg chewing gum'					,	'S'	,	'SIMPLE'	)	,
+	('duBz.'	,	'NICOTINE 2.5mg oral film'										,	'S'	,	'SIMPLE'	)	,
+	('E023.'	,	'Nicotine withdrawal'											,  	'S'	,	'SIMPLE'	)	,
+	('E251.'	,	'Tobacco dependence'											,	'S'	,	'SIMPLE'	)	,
+	('E2510'	,	'Tobacco dependence, unspecified'								,	'S'	,	'SIMPLE'	)	,
+	('E2511'	,	'Tobacco dependence, continuous'								,	'S'	,	'SIMPLE'	)	,
+	('E2512'	,	'Tobacco dependence, episodic'									,	'S'	,	'SIMPLE'	)	,
+	('E2513'	,	'Tobacco dependence in remission'								,	'S'	,	'SIMPLE'	)	,
+	('E251z'	,	'Tobacco dependence NOS'										,	'S'	,	'SIMPLE'	)	,
+	('J0364'	,	'Tobacco deposit on teeth'										,	'S'	,	'SIMPLE'	)	,
+	('SMC..'	,	'Toxic effect of tobacco and nicotine'							,	'S'	,	'SIMPLE'	)	,
+	('U6099'	,	'[X]Bupropion causing adverse effects in therapeutic use'		,	'S'	,	'SIMPLE'	)	,
+	('ZV4K0'	,	'[V]Tobacco use'												,	'S'	,	'SIMPLE'	)	,
+	('ZV6D8'	,	'[V]Tobacco abuse counselling'									,	'S'	,	'SIMPLE'	)
+	;
+COMMIT;
+
+CALL SYSPROC.ADMIN_CMD('runstats on table SAILW1169V.SMOKER_LOOKUP with distribution and detailed indexes all'); -- makes tables compatible with all functions e.g. avg etc
+
+COMMIT;
+
+--check
+SELECT * FROM SAILW1169V.SMOKER_LOOKUP;
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+----------------------------- Expand the user table ----------------------------
+
+-- this expands the user table to include EVENT_ details for the ALFs specified
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.input_USER_smoking');
+CREATE TABLE sailW1169V.input_USER_smoking
+(
+ 	    patient_id          BIGINT,
+        alf_sts_cd      INTEGER,
+        diag_date		DATE,
+        event_dt        DATE,
+        event_cd        CHAR(100),
+        event_val		DECIMAL(31,8)
+)
+DISTRIBUTE BY HASH (PATIENT_ID); --previously was best practise, but might be outdated now
+COMMIT;
+
+GRANT ALL ON TABLE SAILW1169V.input_USER_smoking TO ROLE NRDASAIL_SAIL_1169_ANALYST; --granting access to team mates
+
+alter table SAILW1169V.input_USER_smoking activate not logged INITIALLY; --worth doing for large chunks of data
+
+insert into SAILW1169V.input_USER_smoking
+select
+ 	    distinct
+        US.ALF_PE,
+        GP.ALF_STS_CD,
+        US.DIAG_DATE,
+        GP.EVENT_DT,
+        GP.EVENT_CD,
+        GP.EVENT_VAL
+FROM    
+(
+	SELECT * FROM SAILW1169V.gp_database
+		 WHERE
+    		ALF_PE IS NOT NULL
+		AND
+		    event_cd is not NULL
+		AND
+		    event_DT is not NULL
+		AND
+			event_DT >= DATE('2000-01-01')
+		AND
+			event_DT < CURRENT_DATE	
+)	gp	
+RIGHT OUTER JOIN
+(
+	SELECT * FROM SAILW1169V.input_USER_table
+) US
+	ON
+	(GP.ALF_PE = US.ALF_PE)
+	;
+
+COMMIT;
+
+CALL SYSPROC.ADMIN_CMD('runstats on table SAILW1169V.input_USER_smoking with distribution and detailed indexes all'); 
+-- makes tables compatible with all functions e.g. avg etc
+COMMIT;
+
+SELECT * FROM SAILW1169V.INPUT_USER_SMOKING;
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-------- Create event table that combines lookup table and user table ----------
+
+-- combines selected tables using the variables declared above
+
+
+--DROP TABLE SAILW1169V.GP_SMOKE_EVENT;
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.GP_SMOKE_EVENT');
+
+CREATE TABLE sailW1169V.gp_smoke_event
+(
+        patient_id 		        BIGINT,
+        alf_sts_cd		        INTEGER,
+        diag_date				DATE,
+        event_dt  		        VARCHAR(10),
+        event_cd  		        CHAR(6),
+        complexity				VARCHAR(20),
+        event_val				DECIMAL(31,8),
+        description  		    VARCHAR(300),
+        smoking_status 			VARCHAR(1),
+        diff_day				INTEGER, -- this is the difference between the diagnosis date and the event date
+        row_seq					INTEGER, -- ranks the event dates in order from most recent per ALF
+        dd_minus_smoker_period	DATE, -- diagnosis date - the ex-smoker cutoff period
+        ss_during_cutoff		VARCHAR(20), -- whether or not there is a smoker recording during the period above
+        ever_smoked				CHAR(1)
+)
+DISTRIBUTE BY HASH (patient_id); --previously was best practise, but might be outdated now
+COMMIT;
+
+--granting access to team mates
+GRANT ALL ON TABLE SAILW1169V.GP_SMOKE_EVENT TO ROLE NRDASAIL_SAIL_1169_ANALYST;
+
+--worth doing for large chunks of data
+alter table SAILW1169V.GP_SMOKE_EVENT activate not logged INITIALLY;
+
+insert into SAILW1169V.GP_SMOKE_EVENT
+SELECT DISTINCT 	PATIENT_ID,
+					ALF_STS_CD,
+					DIAG_DATE,
+					EVENT_DT,
+					EVENT_CD,
+					COMPLEXITY,
+					EVENT_VAL,
+					DESCRIPTION,
+					SMOKING_STATUS,
+					DIFF_DAY,
+					ROW_NUMBER() OVER(PARTITION BY PATIENT_ID ORDER BY DIFF_DAY), -- ranks the event dates in order from most recent per ALF
+					DD_MINUS_SMOKER_PERIOD, -- diagnosis date - the ex-smoker cutoff period
+					CASE 	WHEN SMOKING_STATUS = 'S'
+							AND EVENT_DT BETWEEN DATE(DD_MINUS_SMOKER_PERIOD) AND DATE(DIAG_DATE) THEN 'S'
+							ELSE NULL END AS SS_DURING_CUTOFF,
+							-- assigns smoker status to anyone with a smoker recording during the period above
+					CASE 	WHEN SAILW1169V.input_smoking_date_cutoff <> 'NULL' THEN
+								(CASE	WHEN SMOKING_STATUS = 'S' AND EVENT_DT<= SAILW1169V.input_smoking_date_cutoff THEN '1'
+										WHEN SMOKING_STATUS = 'E' AND EVENT_DT<= SAILW1169V.input_smoking_date_cutoff THEN '1'
+										ELSE NULL
+										END)
+							WHEN SAILW1169V.input_smoking_date_cutoff = 'NULL' THEN
+								(CASE	WHEN SMOKING_STATUS = 'S' AND EVENT_DT<= DIAG_DATE THEN '1'
+										WHEN SMOKING_STATUS = 'E' AND EVENT_DT<= DIAG_DATE THEN '1'
+										ELSE NULL
+										END)
+							END AS EVER_SMOKED
+				FROM
+(select
+    distinct
+        PATIENT_ID,
+        STS.ALF_STS_CD,
+        US.DIAG_DATE,
+		US.EVENT_DT,
+		US.EVENT_CD,
+        US.EVENT_VAL,
+        LU.DESCRIPTION,
+		CASE	WHEN (COMPLEXITY = 'EVENT_VAL DEPENDENT' AND EVENT_VAL > 0) THEN 'S'
+				WHEN (COMPLEXITY = 'EVENT_VAL DEPENDENT' AND EVENT_VAL = '0') THEN NULL
+				WHEN (COMPLEXITY = 'EVENT_VAL DEPENDENT' AND EVENT_VAL IS NULL) THEN NULL
+				ELSE LU.SMOKING_STATUS
+				END AS SMOKING_STATUS, -- These cases are only classed as smoker when event_val > 0, otherwise they are unknown
+		LU.COMPLEXITY,
+		DAYS(US.DIAG_DATE) - DAYS(US.EVENT_DT) AS DIFF_DAY, -- this is the difference between the diagnosis date and the event date
+		US.DIAG_DATE - SAILW1169V.ex_smoker_cutoff AS DD_MINUS_SMOKER_PERIOD -- ex smoker classification cutoff
+FROM    SAILW1169V.input_USER_smoking US -- extract data from user table
+RIGHT OUTER JOIN
+(
+	SELECT * FROM SAILW1169V.SMOKER_LOOKUP
+) LU --extract data from Look up table (read codes)
+	ON
+	(US.EVENT_CD = LU.SM_CODE)
+RIGHT OUTER JOIN
+(
+	SELECT * FROM SAILW1169V.ALF_STS_CD_SMOKING
+) STS -- limit results to those that have the desired STS codes (default is 1, 4, 39)
+	ON
+	(US.ALF_STS_CD = STS.ALF_STS_CD)
+ WHERE
+    PATIENT_ID IS NOT NULL
+AND  -- restrict to events before diagnosis
+	CASE	WHEN SAILW1169V.input_smoking_date_cutoff <> 'NULL' THEN US.DIAG_DATE <= SAILW1169V.input_smoking_date_cutoff -- only extract cases where diagnosis date is before the cutoff
+			WHEN SAILW1169V.input_smoking_date_cutoff = 'NULL' THEN US.DIAG_DATE = US.DIAG_DATE
+			END
+AND --restrict to events before the cutoff
+	CASE	WHEN SAILW1169V.input_smoking_date_cutoff = 'NULL' THEN US.EVENT_DT <= US.DIAG_DATE
+			WHEN SAILW1169V.input_smoking_date_cutoff <> 'NULL' THEN US.EVENT_DT <= SAILW1169V.input_smoking_date_cutoff
+			END
+GROUP BY PATIENT_ID, EVENT_DT, EVENT_CD, STS.ALF_STS_CD, DIAG_DATE, EVENT_VAL, DESCRIPTION, SMOKING_STATUS, COMPLEXITY -- not entirely sure if necessary?
+ORDER BY PATIENT_ID, EVENT_DT, EVENT_CD, STS.ALF_STS_CD, DIAG_DATE, EVENT_VAL, DESCRIPTION, SMOKING_STATUS, COMPLEXITY
+)
+ WHERE DIFF_DAY >= 0 	-- limit data to entries with event_dt before diagnosis date
+					-- IF YOU WANT TO CHANGE TO ENTRIES AFTER DIAGNOSIS REPLACE WITH 'DIFF_DAY < 0'
+    ;
+COMMIT;
+
+--update GP smoking table to add ever smoked
+
+alter table SAILW1169V.GP_SMOKE_EVENT
+ADD COLUMN EVER_SMOKED_SUM INTEGER;
+
+UPDATE SAILW1169V.GP_SMOKE_EVENT
+SET EVER_SMOKED_SUM  = CASE WHEN SUM(EVER_SMOKED) OVER(PARTITION BY PATIENT_ID) IS NOT NULL
+								THEN SUM(EVER_SMOKED) OVER(PARTITION BY PATIENT_ID)
+									ELSE 0
+							END;
+
+CALL SYSPROC.ADMIN_CMD('runstats on table SAILW1169V.GP_SMOKE_EVENT with distribution and detailed indexes all'); -- makes tables compatible with all functions e.g. avg etc
+
+COMMIT;
+
+--checks
+SELECT * FROM SAILW1169V.GP_SMOKE_EVENT
+GROUP BY PATIENT_ID, EVENT_DT, EVENT_CD, ALF_STS_CD, DIAG_DATE, EVENT_VAL, COMPLEXITY, DESCRIPTION, SMOKING_STATUS, DIFF_DAY, ROW_SEQ, DD_MINUS_SMOKER_PERIOD, SS_DURING_CUTOFF,EVER_SMOKED, EVER_SMOKED_SUM
+ORDER BY PATIENT_ID, DIFF_DAY;
+
+SELECT DISTINCT ALF_STS_CD FROM SAILW1169V.GP_SMOKE_EVENT;
+SELECT MIN(EVENT_DT) AS MIN_EVENT_DT, MAX(EVENT_DT) AS MAX_EVENT_DT, MIN(DIAG_DATE) AS MIN_DIAG_DT, MAX(DIAG_DATE) AS MAX_DIAG_DT FROM SAILW1169V.GP_SMOKE_EVENT;
+-- SELECT * FROM SAILW1169V.GP_SMOKE_EVENT WHERE DIAG_DATE < EVENT_DT; -- check to see if the recorded events are within your specified time frame
+
+-----------------------------------------------------------------------------
+--identify same day smoking category mismatches and set to smoking status unclear
+
+--Multi smoking categories
+
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_MULTI_SMOK_CAT');
+
+CREATE TABLE SAILW1169V.VB_MULTI_SMOK_CAT AS
+(SELECT PATIENT_ID, DIAG_DATE, EVENT_DT FROM SAILW1169V.GP_SMOKE_EVENT OP)
+WITH NO DATA;
+
+INSERT INTO SAILW1169V.VB_MULTI_SMOK_CAT
+(SELECT PATIENT_ID, DIAG_DATE, EVENT_DT FROM
+(SELECT DISTINCT PATIENT_ID,
+				DIAG_DATE,
+				EVENT_DT, 
+				CASE WHEN SS_DURING_CUTOFF = 'S' THEN 'S'
+					WHEN SMOKING_STATUS = 'S' THEN 'S'
+					WHEN SMOKING_STATUS = 'E' THEN 'E'
+					WHEN SMOKING_STATUS = 'N' AND EVER_SMOKED_SUM > 0 THEN 'E' -- if ALF has ever been recorded as smoker or ex smoker, then sum(ever_smoker) > 0
+					WHEN SMOKING_STATUS IS NULL THEN NULL
+						ELSE 'N'
+							END	AS SMOKER_STATUS
+			FROM SAILW1169V.GP_SMOKE_EVENT OP
+ORDER BY PATIENT_ID, EVENT_DT)
+GROUP BY PATIENT_ID, DIAG_DATE, EVENT_DT
+HAVING COUNT(PATIENT_ID||DIAG_DATE||EVENT_DT) > 1);
+
+-------------------------------------------------------------------------------------------------
+--Single smoking categories
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_SINGLE_SMOK_CAT');
+
+CREATE TABLE SAILW1169V.VB_SINGLE_SMOK_CAT AS
+(SELECT PATIENT_ID, DIAG_DATE, EVENT_DT FROM SAILW1169V.GP_SMOKE_EVENT OP)
+WITH NO DATA;
+
+INSERT INTO SAILW1169V.VB_SINGLE_SMOK_CAT
+(SELECT PATIENT_ID, DIAG_DATE, EVENT_DT FROM
+(SELECT DISTINCT PATIENT_ID,
+				DIAG_DATE,
+				EVENT_DT, 
+				CASE WHEN SS_DURING_CUTOFF = 'S' THEN 'S'
+					WHEN SMOKING_STATUS = 'S' THEN 'S'
+					WHEN SMOKING_STATUS = 'E' THEN 'E'
+					WHEN SMOKING_STATUS = 'N' AND EVER_SMOKED_SUM > 0 THEN 'E' -- if ALF has ever been recorded as smoker or ex smoker, then sum(ever_smoker) > 0
+					WHEN SMOKING_STATUS IS NULL THEN NULL
+						ELSE 'N'
+							END	AS SMOKER_STATUS
+			FROM SAILW1169V.GP_SMOKE_EVENT OP
+ORDER BY PATIENT_ID, EVENT_DT)
+GROUP BY PATIENT_ID, DIAG_DATE, EVENT_DT
+HAVING COUNT(PATIENT_ID||DIAG_DATE||EVENT_DT) = 1);
+
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+----------------------- Create Output table ---------------------------------
+
+-- table takes data from the EVENT table and record one smoker status per ALF,
+-- rewriting the status where necessary based on their smoking history within
+-- the cutoff period
+
+--DROP TABLE SAILW1169V.GP_SMOKE_EVENT;
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.VB_SMOKER_OUTPUT_PRE');
+
+CREATE TABLE SAILW1169V.VB_SMOKER_OUTPUT_PRE
+(
+        patient_id    		    	    BIGINT,
+        diag_date					DATE,
+        event_dt					DATE,
+        smoking_status 				CHAR(1),
+        smoking_status_description	VARCHAR(15)
+)
+DISTRIBUTE BY HASH (PATIENT_ID);--previously was best practise, but might be outdated now
+
+COMMIT;
+
+--granting access to team mates
+GRANT ALL ON TABLE SAILW1169V.VB_SMOKER_OUTPUT_PRE TO ROLE NRDASAIL_SAIL_1169_ANALYST;
+
+--worth doing for large chunks of data
+alter table SAILW1169V.VB_SMOKER_OUTPUT_PRE activate not logged INITIALLY;
+
+--Insert no smoking category mismatches
+INSERT INTO SAILW1169V.VB_SMOKER_OUTPUT_PRE
+SELECT PATIENT_ID,
+	DIAG_DATE,
+	EVENT_DT,
+	CASE WHEN SS_DURING_CUTOFF = 'S' THEN 'S'
+					WHEN SMOKING_STATUS = 'S' THEN 'S'
+					WHEN SMOKING_STATUS = 'E' THEN 'E'
+					WHEN SMOKING_STATUS = 'N' AND EVER_SMOKED_SUM > 0 THEN 'E' -- if ALF has ever been recorded as smoker or ex smoker, then sum(ever_smoker) > 0
+					WHEN SMOKING_STATUS IS NULL THEN NULL
+						ELSE 'N'
+							END	AS SMOKING_STATUS,
+	CASE WHEN SS_DURING_CUTOFF = 'S' THEN 'SMOKER'
+					WHEN SMOKING_STATUS = 'S' THEN 'SMOKER'
+					WHEN SMOKING_STATUS = 'E' THEN 'EX-SMOKER'
+					WHEN SMOKING_STATUS = 'N' AND EVER_SMOKED_SUM > 0 THEN 'EX-SMOKER' -- if ALF has ever been recorded as smoker or ex smoker, then sum(ever_smoker) > 0
+					WHEN SMOKING_STATUS IS NULL THEN NULL
+						ELSE 'NEVER SMOKED'
+							END AS SMOKER_STATUS_DESCRIPTION
+FROM SAILW1169V.GP_SMOKE_EVENT AS OP
+WHERE OP.PATIENT_ID||OP.DIAG_DATE||OP.EVENT_DT
+IN (SELECT SI.PATIENT_ID||SI.DIAG_DATE||SI.EVENT_DT FROM SAILW1169V.VB_SINGLE_SMOK_CAT AS SI);
+
+--Insert smoking category mismatches
+INSERT INTO SAILW1169V.VB_SMOKER_OUTPUT_PRE
+SELECT PATIENT_ID,
+	DIAG_DATE,
+	EVENT_DT,
+	'U',
+	'UNCLEAR'
+FROM SAILW1169V.GP_SMOKE_EVENT AS OP
+WHERE OP.PATIENT_ID||OP.DIAG_DATE||OP.EVENT_DT
+IN (SELECT SI.PATIENT_ID||SI.DIAG_DATE||SI.EVENT_DT FROM SAILW1169V.VB_MULTI_SMOK_CAT AS SI);
+
+ALTER TABLE SAILW1169V.VB_SMOKER_OUTPUT_PRE
+ADD COLUMN ROW_SEQ INTEGER;
+
+UPDATE SAILW1169V.VB_SMOKER_OUTPUT_PRE
+SET ROW_SEQ = ROW_NUMBER() OVER(PARTITION BY PATIENT_ID ORDER BY EVENT_DT desc);
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.VB_SMOKER_OUTPUT');
+
+CREATE TABLE SAILW1169V.VB_SMOKER_OUTPUT
+(
+        patient_id    		    	BIGINT,
+        diag_date					DATE,
+        smoking_status 				CHAR(1),
+        smoking_status_description	VARCHAR(15)
+)
+DISTRIBUTE BY HASH (PATIENT_ID);
+
+COMMIT;
+
+INSERT INTO SAILW1169V.VB_SMOKER_OUTPUT
+SELECT PATIENT_ID, DIAG_DATE, SMOKING_STATUS, SMOKING_STATUS_DESCRIPTION FROM SAILW1169V.VB_SMOKER_OUTPUT_PRE
+WHERE ROW_SEQ = 1;
+
+SELECT COUNT(DISTINCT PATIENT_ID) AS ORIGINAL_DATASET_COUNT FROM SAILW1169V.input_USER_smoking;
+SELECT COUNT(DISTINCT PATIENT_ID) AS OUTPUT_TABLE_COUNT FROM SAILW1169V.VB_SMOKER_OUTPUT;
+SELECT COUNT(PATIENT_ID), SMOKING_STATUS FROM SAILW1169V.VB_SMOKER_OUTPUT
+GROUP BY SMOKING_STATUS;	
+	
+------------------------------------------------------------------------------------------------
+--Drop working tables and aliases
+
+DROP TABLE SAILW1169V.SMOKER_LOOKUP;
+DROP TABLE SAILW1169V.ALF_STS_CD_SMOKING;
+DROP ALIAS SAILW1169V.input_USER_table;
+DROP ALIAS SAILW1169V.gp_database;
+		
+------------------------------------------------------------------------------------------------
+/* update cohort table with smoker status */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN SMOKING_STATUS_DESCRIPTION VARCHAR(30)
+	ADD COLUMN SMOK INTEGER;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SAILW1169V.VB_SMOKER_OUTPUT AS sst
+		ON coh.ALF_PE = sst.PATIENT_ID
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.SMOKING_STATUS_DESCRIPTION = sst.SMOKING_STATUS_DESCRIPTION;	
+											
+UPDATE SAILW1169V.VB_COHORT3
+	SET SMOK = CASE WHEN SMOKING_STATUS_DESCRIPTION = 'UNCLEAR'
+						THEN 3
+					WHEN SMOKING_STATUS_DESCRIPTION = 'SMOKER'
+						THEN 2
+					WHEN SMOKING_STATUS_DESCRIPTION = 'EX-SMOKER'
+						THEN 1
+					WHEN SMOKING_STATUS_DESCRIPTION = 'NEVER SMOKED'
+						THEN 0
+					ELSE NULL
+				END;
+				
+------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------
+------- BMI script FOR adults aged 18 and over ----------------------
+--- to do first....
+
+--1. Create a cohort table in your schema containing a list of alf's and their WOBs. 
+
+-----------------------------------------------------------------------------------------------------------------
+--2. Type the name of your table into the script below under "YOUR_USER_TABLE_GOES_HERE" 
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.VB_BMI_COHORT3');			
+			
+CREATE TABLE SAILW1169V.VB_BMI_COHORT3 AS
+(SELECT ALF_PE,
+		WOB
+FROM SAILW1169V.VB_COHORT3)
+WITH NO DATA;
+
+INSERT INTO SAILW1169V.VB_BMI_COHORT3
+SELECT ALF_PE,
+		WOB
+FROM SAILW1169V.VB_COHORT3;
+
+CREATE OR REPLACE ALIAS SAILW1169V.BMI_COHORT
+FOR SAILW1169V.VB_BMI_COHORT3;
+
+--CREATE OR REPLACE ALIAS SAILW1169V.BMI_COHORT
+--FOR SAILW1169V.BMI_COHORT_TEST;
+--SELECT * FROM SAILW1169V.BMI_COHORT_TEST
+
+-----------------------------------------------------------------------------------------------------------------
+---3. Find and replace all 1169 with your project schema number using ctrl + f
+
+-----------------------------------------------------------------------------------------------------------------
+---4. Find and replace all ALF_PE with yout alf format using ctrl + f.
+---	  Find and replace all SPELL_NUM_PE with yout spell_num format using ctrl + f.
+
+-----------------------------------------------------------------------------------------------------------------
+
+---5. Create an alias for the most recent versions of the WLGP and PEDW event tables as below:
+
+--create reduced gp table for cohort only
+
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_COHORT3_GP');
+
+CREATE TABLE SAILW1169V.VB_COHORT3_GP
+	AS (SELECT * FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301) WITH NO DATA;
+
+alter table SAILW1169V.VB_COHORT3_GP activate not logged INITIALLY;
+
+INSERT INTO SAILW1169V.VB_COHORT3_GP
+	SELECT gp.* FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301 AS gp
+		INNER JOIN SAILW1169V.VB_COHORT3 AS coh
+			ON gp.ALF_PE = coh.ALF_PE;
+		
+COMMIT;
+
+CREATE OR REPLACE ALIAS SAILW1169V.BMI_ALG_GP
+FOR SAILW1169V.VB_COHORT3_GP;
+
+CREATE OR REPLACE ALIAS SAILW1169V.BMI_ALG_PEDW_SPELL
+FOR SAIL1169V.PEDW_SPELL_20210704;
+
+CREATE OR REPLACE ALIAS SAILW1169V.BMI_ALG_PEDW_DIAG
+FOR SAIL1169V.PEDW_DIAG_20210704;
+
+-----------------------------------------------------------------------------------------------------------------
+--6. Create variables for the earliest and latest dates you want the BMI values for (replace dates as necessary)
+
+CREATE OR REPLACE VARIABLE SAILW1169V.BMI_DATE_FROM DATE DEFAULT '2009-01-01';
+
+CREATE OR REPLACE VARIABLE SAILW1169V.BMI_DATE_TO DATE DEFAULT '2020-12-31';
+-----------------------------------------------------------------------------------------------------------------
+--				RUN CODE FROM HERE
+-----------------------------------------------------------------------------------------------------------------
+
+--Optional 1. Acceptable sts codes -- COMING SOON - not a feature yet!
+
+-----------------------------------------------------------------------------------------------------------------
+--Optional 2. Assign your acceptable ranges for bmi at:
+-- same day varitaion - default = 0.05
+CREATE OR REPLACE VARIABLE SAILW1169V.BMI_SAME_DAY DOUBLE DEFAULT 0.05;
+-- rate of change - default = 0.003
+CREATE OR REPLACE VARIABLE SAILW1169V.BMI_RATE DOUBLE DEFAULT 0.003; 
+
+-----------------------------------------------------------------------------------------------------------------
+-- Optional 3. Create lookup table -- feel free to review the codes listed below and make any changes
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.BMI_LOOKUP');
+
+CREATE TABLE SAILW1169V.BMI_LOOKUP
+(
+        bmi_code        CHAR(5),
+        description		VARCHAR(300),
+        complexity		VARCHAR(51),
+        category		VARCHAR(20)
+);
+
+--granting access to team mates
+GRANT ALL ON TABLE SAILW1169V.BMI_LOOKUP TO ROLE NRDASAIL_SAIL_1169_ANALYST;
+
+--worth doing for large chunks of data
+alter table SAILW1169V.BMI_LOOKUP activate not logged INITIALLY;
+
+-- This lookup table contains the GP look up codes relevent to height, weight and BMI, they are categorised as such.
+insert into SAILW1169V.BMI_LOOKUP
+VALUES
+('2293.', 'O/E -height within 10% average', 'where event_val between x and y (depending on unit)', 'height'),
+('229..', 'O/E - height', 'where event_val between x and y (depending on unit)', 'height'),
+('229Z.', 'O/E - height NOS', 'where event_val between x and y (depending on unit)', 'height'),
+('2292.', 'O/E - height 10-20% < average', 'included, but only 6 records', 'height'),
+('2294.', 'O/E-height 10-20% over average', 'included, but only 1 records', 'height'),
+('2295.', 'O/E -height > 20% over average', 'included, but only 4 records', 'height'),
+('2291.', 'O/E-height > 20% below average', 'included, but only 23 records', 'height'),
+('22A..', 'O/E - weight', 'where event_val between 32 and 250', 'weight'),
+('22A1.', 'O/E - weight > 20% below ideal', 'where event_val between 32 and 250', 'weight'),
+('22A2.', 'O/E -weight 10-20% below ideal', 'where event_val between 32 and 250', 'weight'),
+('22A3.', 'O/E - weight within 10% ideal', 'where event_val between 32 and 250', 'weight'),
+('22A4.', 'O/E - weight 10-20% over ideal', 'where event_val between 32 and 250', 'weight'),
+('22A5.', 'O/E - weight > 20% over ideal', 'where event_val between 32 and 250', 'weight'),
+('22A6.', 'O/E - Underweight', 'where event_val between 32 and 250', 'weight'),
+('22AA.', 'Overweight', 'where event_val between 32 and 250', 'weight'),
+('22AZ.', 'O/E - weight NOS', 'where event_val between 32 and 250', 'weight'),
+('1266.', 'FH: Obesity', 'Obese', 'obese'),
+('1444.', 'H/O: obesity', 'Obese', 'Obese class unknown'),
+('22K3.', 'Body Mass Index low K/M2', 'Underweight', 'underweight'),
+('22K..', 'Body Mass Index', 'bmi', 'bmi'),
+('22K1.', 'Body Mass Index normal K/M2', 'Normal weight', 'normal weight'),
+('22K2.', 'Body Mass Index high K/M2', 'Overweight/Obese', 'obese class unknown'),
+('22K4.', 'Body mass index index 25-29 - overweight', 'Overweight', 'overweight'),
+('22K5.', 'Body mass index 30+ - obesity', 'Obese', 'Obese class unknown'),
+('22K6.', 'Body mass index less than 20', 'Underweight', 'underweight'),
+('22K7.', 'Body mass index 40+ - severely obese', 'Obese', 'obese class3'),
+('22K8.', 'Body mass index 20-24 - normal', 'Normal weight', 'normal weight'),
+('22K9.', 'Body mass index centile', 'bmi', 'bmi'),
+('22KC.', 'Obese class I (body mass index 30.0 - 34.9)', 'Obese', 'obese class1'),
+('22KC.', 'Obese class I (BMI 30.0-34.9)', 'Obese', 'obese class1'),
+('22KD.', 'Obese class II (body mass index 35.0 - 39.9)', 'Obese', 'obese class2'),
+('22KD.', 'Obese class II (BMI 35.0-39.9)', 'Obese', 'obese class2'),
+('22KE.', 'Obese class III (BMI equal to or greater than 40.0)', 'Obese', 'obese class3'),
+('22KE.', 'Obese cls III (BMI eq/gr 40.0)', 'Obese', 'obese class3'),
+('66C4.', 'Has seen dietician - obesity', 'Obese', 'Obese class unknown'),
+('66C6.', 'Treatment of obesity started', 'Obese', 'Obese class unknown'),
+('66CE.', 'Reason for obesity therapy - occupational', 'Obese', 'Obese class unknown'),
+('8CV7.', 'Anti-obesity drug therapy commenced', 'Obese', 'Obese class unknown'),
+('8T11.', 'Rfrrl multidisip obesity clin', 'Obese', 'Obese class unknown'),
+('C38..', 'Obesity/oth hyperalimentation', 'Obese', 'Obese class unknown'),
+('C380.', 'Obesity', 'Obese', 'Obese class unknown'),
+('C3800', 'Obesity due to excess calories', 'Obese', 'Obese class unknown'),
+('C3801', 'Drug-induced obesity', 'Obese', 'Obese class unknown'),
+('C3802', 'Extrem obesity+alveol hypovent', 'Obese', 'obese class3'),
+('C3803', 'Morbid obesity', 'Obese', 'obese class3'),
+('C3804', 'Central obesity', 'Obese', 'Obese class unknown'),
+('C3805', 'Generalised obesity', 'Obese', 'Obese class unknown'),
+('C3806', 'Adult-onset obesity', 'Obese', 'Obese class unknown'),
+('C3807', 'Lifelong obesity', 'Obese', 'Obese class unknown'),
+('C38z.', 'Obesity/oth hyperalimentat NOS', 'Obese', 'Obese class unknown'),
+('C38z0', 'Simple obesity NOS', 'Obese', 'Obese class unknown'),
+('Cyu7.', '[X]Obesity+oth hyperalimentatn', 'Obese', 'Obese class unknown'),
+('22K4.', 'BMI 25-29 - overweight', 'Overweight', 'overweight'),
+('22A1.', 'O/E - weight > 20% below ideal', 'Underweight', 'underweight'),
+('22A2.', 'O/E -weight 10-20% below ideal', 'Underweight', 'underweight'),
+('22A3.', 'O/E - weight within 10% ideal', 'Normal weight', 'normal weight'),
+('22A4.', 'O/E - weight 10-20% over ideal', 'Overweight', 'overweight'),
+('22A5.', 'O/E - weight > 20% over ideal', 'Overweight', 'overweight'),
+('22A6.', 'O/E - Underweight', 'Underweight', 'underweight'),
+('22AA.', 'Overweight', 'Overweight', 'overweight'),
+('R0348', '[D] Underweight', 'Underweight', 'underweight'),
+('66C1.','Itinital obesity assessment','Obese','Obese class unknown'),
+('66C2.','Follow-up obesity assessment','Obese','Obese class unknown'),
+('66C5.','Treatment of obesity changed','Obese','Obese class unknown'),
+('66CX.','Obesity multidisciplinary case review','Obese','Obese class unknown'),
+('66CZ.','Obesity monitoring NOS','Obese','Obese class unknown'),
+('9hN..','Exception reporting: obesity quality indicators','Obese','Obese class unknown'),
+('9OK..','Obesity monitoring admin.','Obese','Obese class unknown'),
+('9OK1.','Attends obesity monitoring','Obese','Obese class unknown'),
+('9OK3.','Obesity monitoring default','Obese','Obese class unknown'),
+('9OK2.','Refuses obesity monitoring','Obese','Obese class unknown'),
+('9OK4.','Obesity monitoring 1st letter','Obese','Obese class unknown'),
+('9OK5.','Obesity monitoring 2nd letter','Obese','Obese class unknown'),
+('9OK6.','Obesity monitoring 3rd letter','Obese','Obese class unknown'),
+('9OK7.','Obesity monitoring verbal inv.','Obese','Obese class unknown'),
+('9OK8.','Obesity monitor phone invite','Obese','Obese class unknown'),
+('9OKA.','Obesity monitoring check done','Obese','Obese class unknown'),
+('9OKZ.','Obesity monitoring admin.NOS','Obese','Obese class unknown'),
+('C38y0','Pickwickian syndrome','Obese','Obese class unknown')
+;
+
+-- end of read codes
+
+SELECT * FROM SAILW1169V.BMI_LOOKUP;
+
+-----------------------------------------------------------------------------------------------------------------
+-- 8. Drop final BMI table if it exists using the code below
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.BMI_ALG_OUTPUT');
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.BMI_UNCLEANED');
+
+-----------------------------------------------------------------------------------------------------------------
+-- 9. Create a table from BMI codes that give BMI categories. Takes their values with them when present
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.BMI_CATa');
+
+CREATE TABLE SAILW1169V.BMI_CATa
+(
+		alf_pe        	BIGINT,
+		bmi_dt     		DATE,
+		bmi_cat2	   	VARCHAR(20),
+		bmi_val       	INTEGER
+);
+
+alter table SAILW1169V.BMI_CATa activate not logged INITIALLY;
+
+INSERT INTO  SAILW1169V.BMI_CATa 
+SELECT ALF_PE, BMI_DT, BMI_CAT2, BMI_VAL
+FROM ( 
+	SELECT DISTINCT (ALF_PE), event_dt AS bmi_dt, 'Underweight' AS bmi_cat2, '1' AS bmi_c, CASE WHEN event_val >= 12 AND event_val < 18.50 THEN event_val END AS bmi_val
+	FROM SAILW1169V.BMI_COHORT 
+	INNER JOIN SAILW1169V.BMI_ALG_GP
+	USING (ALF_PE)
+	WHERE event_cd IN (SELECT BMI_CODE FROM SAILW1169V.BMI_LOOKUP WHERE category = 'underweight') AND alf_sts_cd IN ('1', '4', '39')
+	UNION 
+	SELECT DISTINCT (ALF_PE), event_dt AS bmi_dt, 'Normal weight' AS bmi_cat2, '2' AS bmi_c,  CASE WHEN event_val >= 18.5 AND event_val < 25 THEN event_val END AS bmi_val
+	FROM SAILW1169V.BMI_COHORT 
+	INNER JOIN SAILW1169V.BMI_ALG_GP
+	USING (ALF_PE)
+	WHERE event_cd IN (SELECT BMI_CODE FROM SAILW1169V.BMI_LOOKUP WHERE category = 'normal weight') AND alf_sts_cd IN ('1', '4', '39')
+	UNION 
+	SELECT DISTINCT (ALF_PE), event_dt AS bmi_dt, 'Overweight' AS bmi_cat2, '3' AS bmi_c, CASE WHEN event_val >= 25 AND event_val < 30 THEN event_val END AS bmi_val
+	FROM SAILW1169V.BMI_COHORT 
+	INNER JOIN SAILW1169V.BMI_ALG_GP
+	USING (ALF_PE)
+	WHERE event_cd IN (SELECT BMI_CODE FROM SAILW1169V.BMI_LOOKUP WHERE category = 'overweight') AND alf_sts_cd IN ('1', '4', '39')
+	UNION 
+	SELECT DISTINCT (ALF_PE), event_dt AS bmi_dt, 'Obese class1' AS bmi_cat2, '4' AS bmi_c, CASE WHEN event_val >=30 AND event_val <35 THEN event_val END AS bmi_val
+	FROM SAILW1169V.BMI_COHORT 
+	INNER JOIN SAILW1169V.BMI_ALG_GP
+	USING (ALF_PE)
+	WHERE event_cd IN (SELECT BMI_CODE FROM SAILW1169V.BMI_LOOKUP WHERE category = 'Obese class1') AND alf_sts_cd IN ('1', '4', '39')
+	UNION 
+	SELECT DISTINCT (ALF_PE), event_dt AS bmi_dt, 'Obese class2' AS bmi_cat2, '5' AS bmi_c, CASE WHEN event_val >=35 AND event_val <40 THEN event_val END AS bmi_val
+	FROM SAILW1169V.BMI_COHORT 
+	INNER JOIN SAILW1169V.BMI_ALG_GP
+	USING (ALF_PE)
+	WHERE event_cd IN (SELECT BMI_CODE FROM SAILW1169V.BMI_LOOKUP WHERE category = 'obese class2') AND alf_sts_cd IN ('1', '4', '39')
+	UNION 
+	SELECT DISTINCT (ALF_PE), event_dt AS bmi_dt, 'Obese class3' AS bmi_cat2, '6' AS bmi_c, CASE WHEN event_val >=40 AND event_val <=100 THEN event_val END AS bmi_val
+	FROM SAILW1169V.BMI_COHORT 
+	INNER JOIN SAILW1169V.BMI_ALG_GP
+	USING (ALF_PE)
+	WHERE event_cd IN (SELECT BMI_CODE FROM SAILW1169V.BMI_LOOKUP WHERE category = 'obese class3') AND alf_sts_cd IN ('1', '4', '39')
+	UNION 
+	SELECT DISTINCT (ALF_PE), event_dt AS bmi_dt, 'Obese class unknown' AS bmi_cat2, '7' AS bmi_c, CASE WHEN event_val >=30 AND event_val <=100 THEN event_val END AS bmi_val
+	FROM SAILW1169V.BMI_COHORT 
+	INNER JOIN SAILW1169V.BMI_ALG_GP
+	USING (ALF_PE)
+	WHERE event_cd IN (SELECT BMI_CODE FROM SAILW1169V.BMI_LOOKUP WHERE category = 'Obese class unknown') AND alf_sts_cd IN ('1', '4', '39')
+); 
+
+COMMIT;
+
+-----------------------------------------------------------------------------------------------------------------
+-- 10. Get rid of records from the BMI_CAT2 table where multiple BMI categories have been recorded for an alf on the same date with a range greater than given value
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.BMI_CAT');
+
+CREATE TABLE SAILW1169V.BMI_CAT
+(
+		alf_pe        	BIGINT,
+		bmi_dt     		DATE,
+		bmi_cat2   	 	VARCHAR(20),
+		bmi_val       	INTEGER
+);
+
+--DROP VARIABLE SAILW1169V.BMI_SAME_DAY;
+--CREATE OR REPLACE VARIABLE SAILW1169V.BMI_SAME_DAY DOUBLE DEFAULT 0.05;
+
+INSERT INTO  SAILW1169V.BMI_CAT 
+(SELECT *
+FROM SAILW1169V.BMI_CATa a
+WHERE NOT EXISTS 
+(SELECT *
+FROM 
+(SELECT ALF_PE, bmi_dt, count(*) AS count_bmi_cat2, max(bmi_val) - min(bmi_val) AS rnge
+FROM SAILW1169V.BMI_CATa 
+WHERE bmi_val IS NOT NULL
+GROUP BY ALF_PE, bmi_dt
+ORDER BY count_bmi_cat2 DESC) b
+WHERE count_bmi_cat2 > 1
+AND rnge/bmi_val > SAILW1169V.BMI_SAME_DAY
+AND a.ALF_PE = b.ALF_PE
+AND a.bmi_dt = b.bmi_dt))
+;
+-----------------------------------------------------------------------------------------------------------------
+-- 11.  Create a table from bmi values codes, remove extreme values, 
+--assign BMI categories, and remove records where there are multiple 
+--BMI categories for a given alf and date  
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.BMI_VALa');
+
+CREATE TABLE SAILW1169V.BMI_VALa
+(
+		alf_pe        	BIGINT,
+		bmi_dt     		DATE,
+		bmi_cat2	   	VARCHAR(20),
+		bmi_val       	INTEGER
+);
+
+alter table SAILW1169V.BMI_VALa activate not logged INITIALLY;
+
+INSERT INTO  SAILW1169V.BMI_VALa  
+(SELECT *
+FROM 
+(SELECT DISTINCT ALF_PE, bmi_dt, 
+CASE  
+WHEN bmi_val < 18.5 THEN 'Underweight'
+WHEN bmi_val >=18.5 AND bmi_val <25 THEN 'Normal weight'
+WHEN bmi_val >= 25.0 AND bmi_val < 30 THEN 'Overweight'
+WHEN bmi_val >= 30.0 AND bmi_val < 35 THEN 'Obese class1'
+WHEN bmi_val >= 35.0 AND bmi_val < 40  THEN 'Obese class2'
+WHEN bmi_val >= 40.0 THEN 'Obese class3'
+ELSE NULL END AS bmi_cat2,
+bmi_val
+FROM 
+(SELECT DISTINCT (ALF_PE), event_dt AS bmi_dt, event_val AS bmi_val
+FROM SAILW1169V.BMI_COHORT 
+INNER JOIN SAILW1169V.BMI_ALG_GP
+USING (ALF_PE)
+WHERE event_cd IN (SELECT BMI_CODE FROM SAILW1169V.BMI_LOOKUP WHERE category = 'bmi') AND alf_sts_cd IN ('1', '4', '39')
+AND event_val BETWEEN 12 AND 100))
+WHERE bmi_cat2 IS NOT NULL)
+; 
+
+COMMIT;
+
+-----------------------------------------------------------------------------------------------------------------
+-- 12.  Get rid of records from the BMI_CAT2 table where multiple BMI categories have been recorded for an alf on the same date with a range greater than given value
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.BMI_VAL');
+
+CREATE TABLE SAILW1169V.BMI_VAL
+(
+		alf_pe        	BIGINT,
+		bmi_dt     		DATE,
+		bmi_cat2	   	VARCHAR(20),
+		bmi_val       	INTEGER
+);
+
+alter table SAILW1169V.BMI_VAL activate not logged INITIALLY;
+
+INSERT INTO SAILW1169V.BMI_VAL  
+(SELECT *
+FROM SAILW1169V.BMI_VALa a
+WHERE NOT EXISTS 
+(SELECT *
+FROM 
+(SELECT ALF_PE, bmi_dt, count(*) AS count_bmi_cat2, max(bmi_val) - min(bmi_val) AS rnge
+FROM SAILW1169V.BMI_VALa 
+WHERE bmi_val IS NOT NULL
+GROUP BY ALF_PE, bmi_dt
+ORDER BY count_bmi_cat2 DESC) b
+WHERE count_bmi_cat2 > 1
+AND rnge/bmi_val > SAILW1169V.BMI_SAME_DAY
+AND a.ALF_PE = b.ALF_PE
+AND a.bmi_dt = b.bmi_dt))
+;
+
+COMMIT;
+
+--11. Create a table of the most recent height measurement taken for an alf when they were 18 or over and 
+--cleans by converting inches and centimeters to meteres and removes extreme values  
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.BMI_HEIGHT');
+
+CREATE TABLE SAILW1169V.BMI_HEIGHT
+(
+		alf_pe        	BIGINT,
+		height     		DECIMAL(3,2),
+		age_height		DECIMAL(5),
+		height_dt      	DATE,
+		event_order		SMALLINT
+);
+
+alter table SAILW1169V.BMI_HEIGHT activate not logged INITIALLY;
+
+INSERT INTO SAILW1169V.BMI_HEIGHT
+(SELECT ALF_PE, CASE 
+WHEN height_val BETWEEN 1.2 AND 2.13 THEN height_val 
+WHEN height_val BETWEEN 120 AND 213 THEN height_val/100 ---converts centimeters to meters
+WHEN height_val BETWEEN 48 AND 84 THEN (height_val*2.54)/100  ---converts inches to meters
+ELSE NULL END AS height, age_height, height_dt, event_order
+FROM ( 
+	SELECT ALF_PE, height_val, height_dt, DAYS_BETWEEN (height_dt, wob)/365.25 AS age_height, 
+ 	ROW_NUMBER() OVER (PARTITION BY ALF_PE ORDER BY height_dt desc) AS event_order --retrieves height values taken and puts them in reverse order 
+	FROM (
+		SELECT DISTINCT a.ALF_PE, a.wob,  event_dt AS height_dt, event_val AS height_val
+		FROM SAILW1169V.BMI_COHORT a 
+		INNER JOIN SAILW1169V.BMI_ALG_GP
+		USING (ALF_PE)
+		WHERE event_cd IN (SELECT BMI_CODE FROM SAILW1169V.BMI_LOOKUP WHERE category = 'height')
+		AND alf_sts_cd IN ('1', '4', '39')
+		)
+	)
+WHERE event_order = 1 --most recent height measurement and removes duplicates 
+AND age_height >= 18
+ORDER BY alf_pe, event_order
+	 --removes measurements taken when alfs are children
+);
+
+COMMIT;
+
+
+---12. Create a table of weight measurements and remove extreme values 
+
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.BMI_WEIGHT');
+
+CREATE TABLE SAILW1169V.BMI_WEIGHT
+(
+		alf_pe        	BIGINT,
+		weight_dt     	DATE,
+		weight	   	 	INTEGER
+);
+
+
+INSERT INTO SAILW1169V.BMI_WEIGHT
+(SELECT DISTINCT (ALF_PE), event_dt, event_val AS weight_val  --retrives weight values for alfs in cohort table 
+FROM SAILW1169V.BMI_COHORT a
+INNER JOIN SAILW1169V.BMI_ALG_GP
+USING (ALF_PE)
+WHERE event_cd IN (SELECT BMI_CODE FROM SAILW1169V.BMI_LOOKUP WHERE category = 'weight')
+AND event_val IS NOT NULL
+AND alf_sts_cd IN ('1', '4', '39')
+AND event_val BETWEEN 32 AND 250 
+--AND (DAYS_BETWEEN (event_dt, a.wob)/365.25) >=18 ORDER BY ALF_PE, event_dt
+);
+
+--13. Create a table of BMI values calculated using the above height and weight values 
+--remove extreme values and assign BMI categories. BMI_DT is equal to WEIGHT_DT. Remove 
+--rows where there are multiple categories for alfs and dates 
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.BMI_WEIGHT_VALUES_ADULTS_a');
+
+CREATE TABLE SAILW1169V.BMI_WEIGHT_VALUES_ADULTS_a
+(
+		alf_pe        	BIGINT,
+		bmi_dt     		DATE,
+		height	   	 	DECIMAL(3,2),
+		weight			INTEGER,
+		bmi_cat2		VARCHAR(20),
+		bmi_val			INTEGER
+);
+
+INSERT INTO SAILW1169V.BMI_WEIGHT_VALUES_ADULTS_a 
+(SELECT ALF_PE, bmi_dt, height, weight,
+CASE  
+WHEN bmi_val < 18.5 THEN 'Underweight'
+WHEN bmi_val >=18.5 AND bmi_val <25 THEN 'Normal weight'
+WHEN bmi_val >= 25.0 AND bmi_val < 30 THEN 'Overweight'
+WHEN bmi_val >= 30.0 AND bmi_val < 35 THEN 'Obese class1'
+WHEN bmi_val >= 35.0 AND bmi_val < 40 THEN 'Obese class2'
+WHEN bmi_val >= 40.0 THEN 'Obese class3'
+ELSE NULL END AS bmi_cat2, bmi_val
+FROM (
+	SELECT DISTINCT (ALF_PE), weight_dt AS bmi_dt, DEC(DEC(weight, 10, 2)/(height*height),10) AS bmi_val, height, weight-- this converts weight and bmi into decimal and is necessary to avoid a system error 
+	FROM SAILW1169V.BMI_HEIGHT
+	INNER JOIN SAILW1169V.BMI_WEIGHT
+	USING (ALF_PE)
+	WHERE DEC(DEC(weight, 10, 2)/(height*height),10) BETWEEN 12 AND 100
+	)
+ORDER BY ALF_PE, bmi_dt
+)
+; 
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.BMI_WEIGHT_VALUES_ADULTS');
+
+CREATE TABLE SAILW1169V.BMI_WEIGHT_VALUES_ADULTS
+(
+		alf_pe        	BIGINT,
+		bmi_dt     		DATE,
+		height			DECIMAL(3,2),
+		weight	   	 	INTEGER,
+		bmi_cat2		VARCHAR(20),
+		bmi_val			INTEGER
+);
+
+INSERT INTO SAILW1169V.BMI_WEIGHT_VALUES_ADULTS 
+(SELECT *
+FROM SAILW1169V.BMI_WEIGHT_VALUES_ADULTS_a  a
+WHERE NOT EXISTS 
+	(SELECT *
+	FROM 
+		(SELECT ALF_PE, BMI_DT, COUNT(*) AS count_weight_val,  max(bmi_val) - min(bmi_val) AS rnge 
+		FROM SAILW1169V.BMI_WEIGHT_VALUES_ADULTS_a 
+		GROUP BY ALF_PE, bmi_dt
+		ORDER BY count_weight_val DESC
+		) b
+	WHERE count_weight_val > 1
+	AND rnge > 1
+	AND a.ALF_PE = b.ALF_PE
+	AND a.bmi_dt = b.bmi_dt
+	)
+AND bmi_cat2 IS NOT NULL
+);
+
+--x. Pull in results from PEDW
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.BMI_PEDW');
+
+CREATE TABLE SAILW1169V.BMI_PEDW
+(
+		alf_pe        	BIGINT,
+		bmi_dt     		DATE,
+		bmi_cat2		VARCHAR(20)
+);
+
+INSERT INTO SAILW1169V.BMI_PEDW 
+SELECT distinct ALF_PE, ADMIS_DT AS bmi_dt, 'Obese class unknown' AS bmi_cat2
+FROM SAILW1169V.BMI_COHORT
+INNER JOIN 
+SAILW1169V.BMI_ALG_PEDW_SPELL USING (ALF_PE)
+INNER JOIN 
+SAILW1169V.BMI_ALG_PEDW_DIAG using (SPELL_NUM_PE)
+WHERE DIAG_CD IN ('E66',
+				'E660',
+				'E661',
+				'E668',
+				'E669')
+AND alf_sts_cd IN ('1', '4', '39');
+
+INSERT INTO SAILW1169V.BMI_PEDW 
+SELECT distinct ALF_PE, ADMIS_DT AS bmi_dt, 'Obese class3' AS bmi_cat2
+FROM SAILW1169V.BMI_COHORT
+INNER JOIN 
+SAILW1169V.BMI_ALG_PEDW_SPELL USING (ALF_PE)
+INNER JOIN 
+SAILW1169V.BMI_ALG_PEDW_DIAG using (SPELL_NUM_PE)
+WHERE DIAG_CD = 'E662'
+AND alf_sts_cd IN ('1', '4', '39');
+
+--14. Combine tables where the hierarchy for entries on the same date for 
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.BMI_COMBOa');
+
+CREATE TABLE SAILW1169V.BMI_COMBOa
+(
+		alf_pe        	BIGINT,
+		bmi_dt     		DATE,
+		bmi_cat2		VARCHAR(20),
+		bmi_val			INTEGER,
+		height			DECIMAL(3,2),
+		weight			INTEGER,
+		source_type		VARCHAR(12),
+		source_rank		SMALLINT,
+		source_db		CHAR(4)
+);
+
+INSERT INTO SAILW1169V.BMI_COMBOa
+SELECT DISTINCT * FROM (
+SELECT ALF_PE, bmi_dt, bmi_cat2, bmi_val, NULL AS height, NULL AS weight, 'bmi category' AS source_type, '3' AS source_rank, 'WLGP' AS source_db    ---everything from the bmi_cat2 table 
+FROM SAILW1169V.BMI_CAT WHERE bmi_dt BETWEEN SAILW1169V.BMI_DATE_FROM AND SAILW1169V.BMI_DATE_TO
+UNION
+SELECT ALF_PE, bmi_dt, bmi_cat2, bmi_val, NULL, NULL, 'bmi value' AS source_type, '1' AS source_rank, 'WLGP' AS source_db     ---everything from the BMI_VAL table where the alfs and dates aren't duplicating what's in the bmi_cat2 table 
+FROM SAILW1169V.BMI_VAL WHERE bmi_dt BETWEEN SAILW1169V.BMI_DATE_FROM AND SAILW1169V.BMI_DATE_TO
+UNION 
+SELECT ALF_PE, bmi_dt, bmi_cat2,bmi_val, height, weight, 'weight' AS source_type, '2' AS source_rank, 'WLGP' AS source_db   ---everything from the weight status table that's not in the previous two tables 
+FROM SAILW1169V.BMI_WEIGHT_VALUES_ADULTS WHERE  bmi_dt BETWEEN SAILW1169V.BMI_DATE_FROM AND SAILW1169V.BMI_DATE_TO
+UNION 
+SELECT ALF_PE, bmi_dt, bmi_cat2, NULL AS bmi_val, NULL AS height, NULL AS weight, 'ICD-10' AS source_type, '5' AS source_rank, 'PEDW' AS source_db   ---everything from the weight status table that's not in the previous two tables 
+FROM SAILW1169V.BMI_PEDW WHERE  bmi_dt BETWEEN SAILW1169V.BMI_DATE_FROM AND SAILW1169V.BMI_DATE_TO
+UNION
+SELECT ALF_PE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL      ---everything from the original table that isn't in the above two
+FROM SAILW1169V.BMI_COHORT c
+WHERE NOT EXISTS 
+(SELECT DISTINCT * FROM (
+SELECT ALF_PE, bmi_dt, bmi_cat2, bmi_val, NULL AS height, NULL AS weight, 'bmi category' AS source_type, '3' AS source_rank, 'WLGP' AS source_db    ---everything from the bmi_cat2 table 
+FROM SAILW1169V.BMI_CAT WHERE bmi_dt BETWEEN SAILW1169V.BMI_DATE_FROM AND SAILW1169V.BMI_DATE_TO
+UNION
+SELECT ALF_PE, bmi_dt, bmi_cat2, bmi_val, NULL, NULL, 'bmi value' AS source_type, '1' AS source_rank, 'WLGP' AS source_db     ---everything from the BMI_VAL table where the alfs and dates aren't duplicating what's in the bmi_cat2 table 
+FROM SAILW1169V.BMI_VAL WHERE bmi_dt BETWEEN SAILW1169V.BMI_DATE_FROM AND SAILW1169V.BMI_DATE_TO
+UNION 
+SELECT ALF_PE, bmi_dt, bmi_cat2,bmi_val, height, weight, 'weight' AS source_type, '2' AS source_rank, 'WLGP' AS source_db   ---everything from the weight status table that's not in the previous two tables 
+FROM SAILW1169V.BMI_WEIGHT_VALUES_ADULTS WHERE  bmi_dt BETWEEN SAILW1169V.BMI_DATE_FROM AND SAILW1169V.BMI_DATE_TO
+UNION 
+SELECT ALF_PE, bmi_dt, bmi_cat2, NULL AS bmi_val, NULL AS height, NULL AS weight, 'ICD-10' AS source_type, '5' AS source_rank, 'PEDW' AS source_db   ---everything from the weight status table that's not in the previous two tables 
+FROM SAILW1169V.BMI_PEDW WHERE  bmi_dt BETWEEN SAILW1169V.BMI_DATE_FROM AND SAILW1169V.BMI_DATE_TO
+) b 
+WHERE c.ALF_PE = b.ALF_PE));
+
+-- 15. Flag unusual entries for bmi
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.BMI_UNCLEANED');
+
+CREATE TABLE SAILW1169V.BMI_UNCLEANED
+(
+		alf_pe        	BIGINT,
+		bmi_dt     		DATE,
+		bmi_cat2		VARCHAR(20),
+		bmi_val			INTEGER,
+		height			DECIMAL(3,2),
+		weight			INTEGER,
+		source_type		VARCHAR(12),
+		source_rank		SMALLINT,
+		source_db		CHAR(4),
+		wob				DATE,
+		bmi_flg			CHAR(1),
+		age_flg			CHAR(1)
+);
+
+INSERT INTO SAILW1169V.BMI_UNCLEANED
+SELECT ALF_PE, BMI_DT, BMI_CAT2, BMI_VAL, HEIGHT, WEIGHT, source_type, source_rank, source_db, wob,
+CASE 	WHEN BMI_VAL IS NULL THEN
+				CASE WHEN (dt_diff1 = 0 AND bmi_diff1 > 1) OR (bmi_diff2 > 1 AND dt_diff2 = 0) THEN 1 -- patients can have a bmi
+				WHEN (dt_diff1 = 0) OR (dt_diff2 = 0) THEN NULL
+				WHEN (dt_diff1 != 0 AND bmi_diff1/dt_diff1 > SAILW1169V.BMI_RATE AND bmi_diff1 >1) OR (dt_diff2 != 0 AND bmi_diff2/dt_diff2 > SAILW1169V.BMI_RATE  AND bmi_diff2 > 1) THEN 1 -- more than 1 score per 6 months
+				ELSE NULL END 
+		WHEN BMI_VAL IS NOT NULL THEN 
+				CASE WHEN (dt_diff1 = 0 AND (bmiv_diff1/bmi_val) > SAILW1169V.BMI_SAME_DAY) OR (dt_diff2 = 0 AND (bmiv_diff2/bmi_val) > SAILW1169V.BMI_SAME_DAY) THEN 1
+				WHEN (dt_diff1 = 0) OR (dt_diff2 = 0) THEN NULL
+				WHEN (dt_diff1 != 0 AND ((bmiv_diff1/bmi_val)/dt_diff1) > SAILW1169V.BMI_RATE AND bmi_diff1 >1) OR (dt_diff2 != 0 AND ((bmiv_diff2/bmi_val)/dt_diff2) > SAILW1169V.BMI_RATE  AND bmi_diff2 > 1) THEN 1 
+				ELSE NULL END 
+		END AS bmi_flg, -- more than 1 score per 6 months
+CASE WHEN DAYS_BETWEEN(BMI_DT, WOB)/365.25 < 18 THEN '1' ELSE NULL END AS age_flg
+FROM (
+SELECT *,
+abs(bmi_val - (lag(bmi_val) OVER (PARTITION BY ALF_PE ORDER BY bmi_dt))) AS bmiv_diff1, -- identifies changes in weight
+abs(dec(bmi_val - (lead(bmi_val) OVER (PARTITION BY ALF_PE ORDER BY bmi_dt)))) AS bmiv_diff2, -- identifies changes in weight
+abs(bmi_c - (lag(bmi_c) OVER (PARTITION BY ALF_PE ORDER BY bmi_dt))) AS bmi_diff1, -- identifies changes in weight
+abs(bmi_c - (lead(bmi_c) OVER (PARTITION BY ALF_PE ORDER BY bmi_dt))) AS bmi_diff2, -- identifies changes in weight
+abs(DAYS_BETWEEN(bmi_dt, (lag(bmi_dt) OVER (PARTITION BY ALF_PE ORDER BY bmi_dt)))) AS dt_diff1, -- identifies changes in date
+abs(DAYS_BETWEEN(bmi_dt, (lead(bmi_dt) OVER (PARTITION BY ALF_PE ORDER BY bmi_dt)))) AS dt_diff2 -- identifies changes in date
+FROM (SELECT DISTINCT *, CASE WHEN bmi_cat2 = 'Underweight' THEN 1
+					WHEN bmi_cat2 = 'Normal weight' THEN 2
+					WHEN bmi_cat2 = 'Overweight' THEN 3
+					WHEN bmi_cat2 = 'Obese class1' THEN 4
+					WHEN bmi_cat2 = 'Obese class2' THEN 5
+					WHEN bmi_cat2 = 'Obese class3' THEN 6
+					WHEN bmi_cat2 = 'Obese class unknown' THEN 7
+					ELSE NULL END AS bmi_c
+FROM SAILW1169V.BMI_COMBOa
+LEFT JOIN (SELECT ALF_PE, WOB FROM SAILW1169V.BMI_COHORT) USING (ALF_PE)
+))
+WHERE (DAYS_BETWEEN (bmi_dt, wob)/365.25) >= 18
+ORDER BY ALF_PE,bmi_dt
+;
+
+--15. Restrict dates, check for nulls, and ensure entries are only taken for 18s and over 
+
+CREATE TABLE SAILW1169V.BMI_ALG_OUTPUT
+(
+	alf_pe		BIGINT,
+	wob			DATE,
+	bmi_dt		DATE,
+	bmi_val		INTEGER,
+	bmi_cat2	VARCHAR(20),
+	source_type	VARCHAR(12),
+	source_db	CHAR(4)
+); 
+
+INSERT INTO  SAILW1169V.BMI_ALG_OUTPUT 
+SELECT DISTINCT c.ALF_PE, c.wob, a.bmi_dt, bmi_val, bmi_cat2, source_type, source_db
+FROM SAILW1169V.BMI_COHORT c
+LEFT JOIN
+(SELECT ALF_PE, bmi_dt, min(source_rank) AS source_rank
+FROM SAILW1169V.BMI_UNCLEANED
+GROUP BY ALF_PE, bmi_dt
+ORDER BY ALF_PE, bmi_dt) a
+ON c.ALF_PE = a.ALF_PE
+LEFT JOIN 
+SAILW1169V.BMI_UNCLEANED b
+ON a.ALF_PE = b.ALF_PE AND a.bmi_dt =b.bmi_dt AND a.source_rank = b.source_rank
+WHERE (a.bmi_dt BETWEEN SAILW1169V.BMI_DATE_FROM AND SAILW1169V.BMI_DATE_TO OR a.BMI_DT IS NULL)
+AND bmi_flg IS NULL
+ORDER BY c.ALF_PE, a.bmi_dt;
+
+--16. Add BMI_CAT field grouping the obesity classes
+
+ALTER TABLE SAILW1169V.BMI_ALG_OUTPUT
+ADD COLUMN BMI_CAT VARCHAR(13);
+
+UPDATE SAILW1169V.BMI_ALG_OUTPUT
+SET BMI_CAT = CASE WHEN BMI_CAT2 = 'Underweight'
+					THEN 'Underweight'
+				WHEN BMI_CAT2 = 'Normal weight'
+					THEN 'Normal weight'
+				WHEN BMI_CAT2 = 'Overweight'
+					THEN 'Overweight'
+				WHEN BMI_CAT2 = 'Obese class1'
+						OR BMI_CAT2 = 'Obese class2'
+						OR BMI_CAT2 = 'Obese class3'
+						OR BMI_CAT2 = 'Obese class unknown'
+					THEN 'Obese'
+				ELSE NULL
+			END;
+
+----------------------
+
+DROP VARIABLE SAILW1169V.BMI_DATE_FROM;
+DROP VARIABLE SAILW1169V.BMI_DATE_TO;
+DROP VARIABLE SAILW1169V.BMI_RATE;
+DROP VARIABLE SAILW1169V.BMI_SAME_DAY;
+DROP TABLE SAILW1169V.BMI_CATa;
+DROP TABLE SAILW1169V.BMI_CAT;
+DROP TABLE SAILW1169V.BMI_VALa;
+DROP TABLE SAILW1169V.BMI_VAL;
+DROP TABLE SAILW1169V.BMI_HEIGHT;
+DROP TABLE SAILW1169V.BMI_WEIGHT;
+DROP TABLE SAILW1169V.BMI_WEIGHT_VALUES_ADULTS_a;
+DROP TABLE SAILW1169V.BMI_WEIGHT_VALUES_ADULTS;
+DROP TABLE SAILW1169V.BMI_PEDW;
+DROP TABLE SAILW1169V.BMI_COMBOa;
+DROP TABLE SAILW1169V.BMI_LOOKUP;
+DROP TABLE SAILW1169V.VB_COHORT3_GP;
+DROP ALIAS SAILW1169V.BMI_COHORT;
+DROP ALIAS SAILW1169V.BMI_ALG_PEDW_DIAG;
+DROP ALIAS SAILW1169V.BMI_ALG_GP;
+DROP ALIAS SAILW1169V.BMI_ALG_PEDW_SPELL;
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+--Create table with event date to identify obesity category at closest time prior to event
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.VB_BMI_V3_COHORT');
+		
+CREATE TABLE SAILW1169V.VB_BMI_V3_COHORT
+AS (SELECT ALF_PE, WOB, PABX_STR FROM SAILW1169V.VB_COHORT3) WITH NO DATA;
+
+INSERT INTO SAILW1169V.VB_BMI_V3_COHORT
+	(ALF_PE,
+	WOB,
+	PABX_STR)
+	SELECT ALF_PE, WOB, PABX_STR FROM SAILW1169V.VB_COHORT3;
+
+---------------------------------------------------------
+--Delete multiple entries where more than one BMI value is recorded on a cetarin day but the BMI category is the same - retaining the highest recorded BMI value entry
+
+DELETE FROM 
+	(SELECT ROWNUMBER()	OVER(PARTITION BY ALF_PE, BMI_DT, BMI_CAT2 ORDER BY BMI_VAL desc) AS rn
+			FROM SAILW1169V.BMI_ALG_OUTPUT) AS mqo
+			WHERE rn > 1;
+		
+--Delete all entries Where multiple BMI categories are recorded on the same day because they are an error with unknown classficiation
+		
+DELETE FROM SAILW1169V.BMI_ALG_OUTPUT
+	WHERE (ALF_PE, BMI_DT) IN
+	(SELECT ALF_PE, BMI_DT
+	FROM SAILW1169V.BMI_ALG_OUTPUT
+	GROUP BY ALF_PE, BMI_DT
+	HAVING COUNT(ALF_PE) > 1);
+
+--BMI
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+ADD COLUMN BMI_VAL INTEGER;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING (SELECT	op.ALF_PE,
+					op.WOB,
+					mqo.BMI_DT,
+					op.BMI_VAL,
+					op.BMI_CAT2,
+					op.SOURCE_TYPE,
+					op.SOURCE_DB
+	FROM 
+		(SELECT alg.ALF_PE,
+				max(alg.BMI_DT) AS BMI_DT
+				FROM SAILW1169V.BMI_ALG_OUTPUT AS alg
+				LEFT JOIN SAILW1169V.VB_BMI_V3_COHORT AS coh
+					ON alg.ALF_PE = coh.ALF_PE
+				WHERE alg.BMI_DT IS NOT NULL
+				AND alg.BMI_DT < coh.PABX_STR
+				AND alg.BMI_VAL IS NOT NULL
+				GROUP BY alg.ALF_PE) AS mqo
+			LEFT JOIN SAILW1169V.BMI_ALG_OUTPUT AS op
+				ON mqo.ALF_PE = op.ALF_PE
+				AND mqo.BMI_DT = op.BMI_DT
+	ORDER BY op.ALF_PE) AS bmi
+		ON coh.ALF_PE = bmi.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.BMI_VAL = bmi.BMI_VAL;
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+--alcohol
+
+CALL FNC.DROP_IF_EXISTS ('SESSION.VB_COHORT_EVENT_ALCOHOL');
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_ALCOHOL
+	(ALF_PE VARCHAR(15),
+	ALC_GROUP VARCHAR(30),
+	EVENT_CD VARCHAR(5),
+	EVENT_VAL INTEGER,
+	EVENT_DT DATE)
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_ALCOHOL
+WITH CTE AS
+	(SELECT gp.ALF_PE,
+			gp.EVENT_DT,
+			gp.EVENT_CD,
+			gp.EVENT_VAL,
+			alc.ALC_GROUP
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301 AS gp
+			LEFT JOIN SAILW1169V.VB_ALCOHOL_READ AS alc
+				ON gp.EVENT_CD = alc.READ_CODE
+				WHERE alc.READ_CODE IS NOT NULL)
+		SELECT coh.ALF_PE,
+				CTE.ALC_GROUP,
+				CTE.EVENT_CD,
+				CTE.EVENT_VAL,
+				max(CTE.EVENT_DT) AS EVENT_DT
+			FROM SAILW1169V.VB_COHORT3 AS coh
+				LEFT JOIN CTE
+					ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE,
+								CTE.EVENT_CD,
+								CTE.EVENT_VAL,
+								CTE.ALC_GROUP;
+							
+COMMIT;
+
+UPDATE SESSION.VB_COHORT_EVENT_ALCOHOL
+	SET ALC_GROUP = CASE WHEN (EVENT_CD IN ('136..',
+											'136Z.',
+											'136V.',
+											'ZV4KC')
+							AND EVENT_VAL = 0)
+						THEN 'Non drinker'
+						WHEN (EVENT_CD IN ('136..',
+											'136Z.',
+											'136V.',
+											'ZV4KC')
+							AND EVENT_VAL < 21)
+						THEN 'Current drinker'
+						WHEN (EVENT_CD IN ('136..',
+											'136Z.',
+											'136V.',
+											'ZV4KC')
+							AND EVENT_VAL >= 21)
+						THEN 'Excess drinker'
+					ELSE ALC_GROUP
+					END;
+				
+--Identify instances where there is an alcohol value and alcohol descriptive code recorded on the same day				
+				
+CALL FNC.DROP_IF_EXISTS ('SESSION.VB_WEEKLY_ALC');				
+				
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_WEEKLY_ALC
+AS (SELECT * FROM SESSION.VB_COHORT_EVENT_ALCOHOL)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+COMMIT;
+
+INSERT INTO SESSION.VB_WEEKLY_ALC
+(SELECT t1.* FROM SESSION.VB_COHORT_EVENT_ALCOHOL AS t1
+INNER JOIN (SELECT * FROM SESSION.VB_COHORT_EVENT_ALCOHOL AS t3
+WHERE t3.EVENT_CD NOT IN ('136..',
+					'136Z.',
+					'136V.',
+					'ZV4KC')) AS t2
+ON t1.ALF_PE = t2.ALF_PE
+AND t1.EVENT_DT = t2.EVENT_DT
+WHERE t1.EVENT_CD IN ('136..',
+					'136Z.',
+					'136V.',
+					'ZV4KC')
+AND t2.ALF_PE IS NOT NULL);
+
+COMMIT;	
+
+--Delete weekly value codes when there is a descriptive code recorded on the same day
+				
+DELETE FROM SESSION.VB_COHORT_EVENT_ALCOHOL AS alc
+    WHERE EXISTS (SELECT ALF_PE, EVENT_DT, EVENT_CD FROM SESSION.VB_WEEKLY_ALC AS wkly
+   					WHERE alc.ALF_PE = wkly.ALF_PE
+   					AND alc.EVENT_DT = wkly.EVENT_DT
+   					AND alc.EVENT_CD = wkly.EVENT_CD);
+   				
+--Identify instances where there is an alcohol status unspecified and alcohol descriptive category recorded on the same day				
+				
+CALL FNC.DROP_IF_EXISTS ('SESSION.VB_UNSPECIFIED_ALC');	   				
+   				
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_UNSPECIFIED_ALC
+AS (SELECT * FROM SESSION.VB_COHORT_EVENT_ALCOHOL)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+COMMIT;
+
+INSERT INTO SESSION.VB_UNSPECIFIED_ALC
+(SELECT t1.* FROM SESSION.VB_COHORT_EVENT_ALCOHOL AS t1
+INNER JOIN (SELECT * FROM SESSION.VB_COHORT_EVENT_ALCOHOL AS t3
+WHERE t3.ALC_GROUP <> 'Drinker status not specified') AS t2
+ON t1.ALF_PE = t2.ALF_PE
+AND t1.EVENT_DT = t2.EVENT_DT
+WHERE t1.ALC_GROUP = 'Drinker status not specified'
+AND t2.ALF_PE IS NOT NULL);
+
+COMMIT;
+
+--Delete unspecified drinking status codes when there is another code recorded on the same day
+				
+DELETE FROM SESSION.VB_COHORT_EVENT_ALCOHOL AS alc
+    WHERE EXISTS (SELECT ALF_PE, EVENT_DT, EVENT_CD FROM SESSION.VB_UNSPECIFIED_ALC AS unsp
+   					WHERE alc.ALF_PE = unsp.ALF_PE
+   					AND alc.EVENT_DT = unsp.EVENT_DT
+   					AND alc.EVENT_CD = unsp.EVENT_CD);
+
+--identify alcohol event in closest proximity prior to the diagosis date  
+
+CALL FNC.DROP_IF_EXISTS ('SESSION.VB_LATEST_ALC');	  
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_LATEST_ALC
+AS	(SELECT ALF_PE,
+			ALC_GROUP,
+			EVENT_DT
+		FROM SESSION.VB_COHORT_EVENT_ALCOHOL)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+COMMIT;
+
+INSERT INTO SESSION.VB_LATEST_ALC
+(SELECT DISTINCT alc.ALF_PE,
+							alc.ALC_GROUP,
+							alc.EVENT_DT 
+				FROM (SELECT ALF_PE,
+							max(EVENT_DT) AS EVENT_DT 
+						FROM SESSION.VB_COHORT_EVENT_ALCOHOL
+						GROUP BY ALF_PE) AS maxd
+	LEFT JOIN SESSION.VB_COHORT_EVENT_ALCOHOL AS alc
+		ON maxd.ALF_PE = alc.ALF_PE
+		AND maxd.EVENT_DT = alc.EVENT_DT
+	ORDER BY ALF_PE, EVENT_DT);
+
+--identify alcohol records with different categories on the same day
+
+CALL FNC.DROP_IF_EXISTS ('SESSION.VB_MULTI_ALC');	
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_MULTI_ALC
+(ALF_PE VARCHAR(15),
+EVENT_DT DATE,
+ALF_COUNT INTEGER)
+ON COMMIT PRESERVE ROWS;
+
+INSERT INTO SESSION.VB_MULTI_ALC
+(SELECT ALF_PE, EVENT_DT, COUNT(ALF_PE) AS ALF_COUNT
+FROM SESSION.VB_LATEST_ALC
+GROUP BY ALF_PE, EVENT_DT
+HAVING COUNT(ALF_PE)>1);
+
+COMMIT;
+
+--delete records from latest alcohol table where there is conflicting alcohol status on the same day
+
+DELETE FROM SESSION.VB_LATEST_ALC AS lalc
+    WHERE EXISTS (SELECT ALF_PE FROM SESSION.VB_MULTI_ALC AS malc
+   					WHERE lalc.ALF_PE = malc.ALF_PE);
+   				
+/* Update cohort3 table with the alcohol flag */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN ALCOHOL VARCHAR(30)
+	ADD COLUMN ALCOHOL_FLG INTEGER;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_LATEST_ALC AS alc
+		ON coh.ALF_PE = alc.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.ALCOHOL = alc.ALC_GROUP
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET ALCOHOL_FLG = CASE WHEN ALCOHOL = 'Non drinker'
+											THEN 0
+										WHEN ALCOHOL = 'Drinker status not specified'
+											THEN 1
+										WHEN ALCOHOL = 'Current drinker'
+											THEN 2
+										WHEN ALCOHOL = 'Excess drinker'
+											THEN 3
+											ELSE NULL
+									END;
+									
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+--EFI
+--Please cite: 
+-- External validation of the electronic Frailty Index using the population of Wales within the Secure Anonymised Information Linkage Databank
+-- J Hollinghurst et al
+-- Age and Ageing
+--DOI https://doi.org/10.1093/ageing/afz110
+-- AND
+-- Development and validation of an electronic Frailty Index using routine primary care electronic health record data
+--Clegg et al
+--Age and Ageing
+--DOI https://doi.org/10.1093/ageing/afw039
+
+--  Deficit  1 , Activity limitation 
+--  Deficit  2 , Anaemia & haematinic deficiency 
+--  Deficit  3 , Arthritis 
+--  Deficit  4 , Atrial fibrillation 
+--  Deficit  5 , Cerebrovascular disease 
+--  Deficit  6 , Chronic kidney disease 
+--  Deficit  7 , Diabetes 
+--  Deficit  8 , Dizziness 
+--  Deficit  9 , Dyspnoea 
+--  Deficit  10 , Falls 
+--  Deficit  11 , Foot problems 
+--  Deficit  12 , Fragility fracture 
+--  Deficit  13 , Hearing impairment 
+--  Deficit  14 , Heart failure 
+--  Deficit  15 , Heart valve disease 
+--  Deficit  16 , Housebound 
+--  Deficit  17 , Hypertension 
+--  Deficit  18 , Hypotension / syncope 
+--  Deficit  19 , Ischaemic heart disease 
+--  Deficit  20 , Memory & cognitive problems 
+--  Deficit  21 , Mobility and transfer problems 
+--  Deficit  22 , Osteoporosis 
+--  Deficit  23 , Parkinsonism & tremor 
+--  Deficit  24 , Peptic ulcer 
+--  Deficit  25 , Peripheral vascular disease 
+--  Deficit  26 , Polypharmacy 
+--  Deficit  27 , Requirement for care 
+--  Deficit  28 , Respiratory disease 
+--  Deficit  29 , Skin ulcer 
+--  Deficit  30 , Sleep disturbance 
+--  Deficit  31 , Social vulnerability 
+--  Deficit  32 , Thyroid disease 
+--  Deficit  33 , Urinary incontinence 
+--  Deficit  34 , Urinary system disease 
+--  Deficit  35 , Visual impairment 
+--  Deficit  36 , Weight loss & anorexia  
+
+--Create alias tables
+
+--final table sailw0911v.jh_efi
+
+
+-------------------------------------
+---- Changes you'll need to make ----
+-------------------------------------
+
+-- 0. Find and replace all SAIL0911V and SAILW0911V with your project number SAILXXXXV and SAILWXXXXV
+-- 1. Check if you need to change ALF_E to ALF_PE
+-- 2. Replace GP table SAIL0911V.WLGP_GP_EVENT_ALF_CLEANSED with the latest version you have in the schema
+-- 3. Find and Replace all instances of SAILW0911V.jh_efi with whatever you want your eFI table to be called
+-- 4a&b. replace this bit: (SELECT ALF_PE ,  Date('2018-12-31') AS event_dt FROM sailw0911V.JL_MM_WDS_V7 ) with your table name that has an ALF and a date in, replace your_dt with your date column, but keep the alias "as event_dt" after 
+-- 5. RUN! CTRL+A , ALT+X
+-- 6. Wait a bit...
+-- 7. Check the final table looks about right
+
+
+CREATE OR REPLACE ALIAS SAILW1169V.GPDATA 
+FOR SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301;
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.VB_EFI');
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.cohort_with_dummy_date');
+
+CREATE TABLE SAILW1169V.COHORT_WITH_DUMMY_DATE AS (SELECT ALF_PE , PABX_STR AS event_dt FROM SAILW1169V.VB_COHORT3) WITH no DATA ;
+
+INSERT INTO SAILW1169V.COHORT_WITH_DUMMY_DATE 
+SELECT ALF_PE ,PABX_STR AS event_dt FROM SAILW1169V.VB_COHORT3;
+
+--drop table SAILW1169V.VB_EFI_DEF1
+
+ CREATE TABLE
+	SAILW1169V.VB_EFI_DEF1 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF1(
+		SELECT
+			ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD = '39F..'
+			AND EVENT_VAL < 19)
+			OR (EVENT_CD IN ( '13O5.',
+			'13V8.',
+			'13VC.',
+			'8F6..',
+			'9EB5.' ) )
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF2 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF2 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			((EVENT_CD = '423..'
+			AND EVENT_VAL BETWEEN 0 AND 12.5)
+			OR (EVENT_CD = '423..'
+			AND EVENT_VAL BETWEEN 25 AND 125)
+			--need to take in to account a change in magnitude of measurement
+			OR (EVENT_CD IN ( '145..',
+			'1451.',
+			'1452.',
+			'1453.',
+			'1454.',
+			'2C23.',
+			'42R41',
+			'42T2.',
+			'66E5.',
+			'7Q090',
+			'7Q091',
+			'B9370',
+			'B9371',
+			'B9372',
+			'B9373',
+			'B937X',
+			'BBmA.',
+			'BBmB.',
+			'BBmL.',
+			'ByuHC',
+			'C2620',
+			'C2621',
+			'D0...',
+			'D00..',
+			'D000.',
+			'D001.',
+			'D00y.',
+			'D00y1',
+			'D00yz',
+			'D00z.',
+			'D00z0',
+			'D00z1',
+			'D00z2',
+			'D00zz',
+			'D01..',
+			'D010.',
+			'D011.',
+			'D0110',
+			'D0111',
+			'D011X',
+			'D011z',
+			'D012.',
+			'D0121',
+			'D0122',
+			'D0123',
+			'D0124',
+			'D0125',
+			'D012z',
+			'D013.',
+			'D0130',
+			'D013z',
+			'D014.',
+			'D0140',
+			'D014z',
+			'D01y.',
+			'D01yy',
+			'D01yz',
+			'D01z.',
+			'D01z0',
+			'D0y..',
+			'D0z..',
+			'D1...',
+			'D104.',
+			'D1040',
+			'D1047',
+			'D104z',
+			'D106.',
+			'D1060',
+			'D1061',
+			'D1062',
+			'D106z',
+			'D11..',
+			'D110.',
+			'D1100',
+			'D1101',
+			'D1102',
+			'D1103',
+			'D1104',
+			'D110z',
+			'D111.',
+			'D1110',
+			'D1111',
+			'D1112',
+			'D1114',
+			'D1115',
+			'D111y',
+			'D111z',
+			'D112z',
+			'D11z.',
+			'D1y..',
+			'D1z..',
+			'D2...',
+			'D20..',
+			'D200.',
+			'D2000',
+			'D2002',
+			'D200y',
+			'D200z',
+			'D201.',
+			'D2010',
+			'D2011',
+			'D2012',
+			'D2013',
+			'D2014',
+			'D2017',
+			'D201z',
+			'D204.',
+			'D20z.',
+			'D21..',
+			'D210.',
+			'D2101',
+			'D2103',
+			'D2104',
+			'D210z',
+			'D211.',
+			'D212.',
+			'D2120',
+			'D213.',
+			'D214.',
+			'D215.',
+			'D2150',
+			'D21y.',
+			'D21yy',
+			'D21yz',
+			'D21z.',
+			'D2y..',
+			'D2z..',
+			'Dyu0.',
+			'Dyu00',
+			'Dyu01',
+			'Dyu02',
+			'Dyu03',
+			'Dyu04',
+			'Dyu05',
+			'Dyu06',
+			'Dyu1.',
+			'Dyu15',
+			'Dyu16',
+			'Dyu17',
+			'Dyu2.',
+			'Dyu21',
+			'Dyu22',
+			'Dyu23',
+			'Dyu24',
+			'J6141' )))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF3 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF3 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '14G..',
+			'14G1.',
+			'14G2.',
+			'52A31',
+			'52A71',
+			'66H..',
+			'N0504',
+			'7K3..',
+			'7K30.',
+			'7K32.',
+			'7K6Z3',
+			'7K6Z7',
+			'7K6ZK',
+			'C340.',
+			'C34z.',
+			'N023.',
+			'N0310',
+			'N04..',
+			'N040.',
+			'N0400',
+			'N0401',
+			'N0402',
+			'N0404',
+			'N0405',
+			'N0407',
+			'N0408',
+			'N0409',
+			'N040A',
+			'N040B',
+			'N040C',
+			'N040D',
+			'N040F',
+			'N040G',
+			'N040H',
+			'N040J',
+			'N040K',
+			'N040L',
+			'N040M',
+			'N040P',
+			'N040S',
+			'N040T',
+			'N047.',
+			'N04X.',
+			'N05..',
+			'N050.',
+			'N0502',
+			'N0504',
+			'N0506',
+			'N0535',
+			'N0536',
+			'N05z1',
+			'N05z4',
+			'N05z5',
+			'N05z6',
+			'N05z9',
+			'N05zJ',
+			'N05zL',
+			'N06z.',
+			'N06z5',
+			'N06z6',
+			'N06zz',
+			'N11..',
+			'N11D.',
+			'Nyu10',
+			'Nyu11',
+			'Nyu12',
+			'Nyu1G' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF4 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF4 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			((EVENT_CD = '38DE.')
+			OR (EVENT_CD IN ( '14AN.',
+			'2432.',
+			'3272.',
+			'3273.',
+			'662S.',
+			'6A9..',
+			'7936A',
+			'9Os1.',
+			'9hF0.',
+			'9hF1.',
+			'G573.',
+			'G5730',
+			'G5731',
+			'G5732',
+			'G5733',
+			'G5734',
+			'G5735',
+			'G573z' )))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF5 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF5 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '14A7.',
+			'14AB.',
+			'14AK.',
+			'662M.',
+			'662e.',
+			'662o.',
+			'7P242',
+			'8HBJ.',
+			'8HHM.',
+			'8HTQ.',
+			'9N0p.',
+			'9N4X.',
+			'9Om1.',
+			'9Om2.',
+			'9Om3.',
+			'9Om4.',
+			'9h21.',
+			'9h22.',
+			'F4236',
+			'G6...',
+			'G61..',
+			'G621.',
+			'G622.',
+			'G631.',
+			'G634.',
+			'G64..',
+			'G640.',
+			'G65..',
+			'G65y.',
+			'G65z.',
+			'G65z1',
+			'G65zz',
+			'G66..',
+			'G663.',
+			'G664.',
+			'G667.',
+			'G670.',
+			'G6711',
+			'G682.',
+			'G68X.',
+			'Gyu6.',
+			'Gyu6B',
+			'Gyu6C',
+			'S62..',
+			'S620.',
+			'S622.',
+			'S627.',
+			'S628.',
+			'S629.',
+			'S6290' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF6 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF6 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			((EVENT_CD = '46W..'
+			AND EVENT_VAL > 30)
+			OR (EVENT_CD = '46TC.'
+			AND EVENT_VAL > 30)
+			OR (EVENT_CD = '46N7.'
+			AND EVENT_VAL > 45)
+			OR (EVENT_CD = '46N4.'
+			AND EVENT_VAL > 30)
+			OR (EVENT_CD = '46N..'
+			AND EVENT_VAL > 150)
+			OR (EVENT_CD = '451F.'
+			AND EVENT_VAL < 60)
+			OR (EVENT_CD IN ( '1Z1..',
+			'1Z12.',
+			'1Z13.',
+			'1Z14.',
+			'1Z15.',
+			'1Z16.',
+			'1Z1B.',
+			'1Z1C.',
+			'1Z1D.',
+			'1Z1E.',
+			'1Z1F.',
+			'1Z1G.',
+			'1Z1H.',
+			'1Z1J.',
+			'1Z1K.',
+			'1Z1L.',
+			'4677.',
+			'6AA..',
+			'9hE0.',
+			'9hE1.',
+			'C104.',
+			'C104y',
+			'C104z',
+			'C1080',
+			'C108D',
+			'C1090',
+			'C1093',
+			'C109C',
+			'C10E0',
+			'C10ED',
+			'C10EK',
+			'C10EL',
+			'C10F0',
+			'C10F3',
+			'C10FC',
+			'C10FL',
+			'C10FM',
+			'Cyu23',
+			'K05..',
+			'K050.',
+			'PD13.',
+			'R110.' )))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF7 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF7 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '2BBR.',
+			'2BBS.',
+			'2BBT.',
+			'2G5L.',
+			'42W3.',
+			'42c..',
+			'66A..',
+			'66A4.',
+			'66A5.',
+			'66AD.',
+			'66AH0',
+			'66AJ.',
+			'66AR.',
+			'66AS.',
+			'66AU.',
+			'66AZ.',
+			'66Ab.',
+			'66Ac.',
+			'66Ai.',
+			'66Aq.',
+			'68A7.',
+			'8A17.',
+			'8BL2.',
+			'8CR2.',
+			'8H7f.',
+			'8HBG.',
+			'8HBH.',
+			'8Hl1.',
+			'9NND.',
+			'9OL1.',
+			'9OLD.',
+			'9h4..',
+			'9h41.',
+			'9h42.',
+			'C10..',
+			'C100.',
+			'C1000',
+			'C1001',
+			'C100z',
+			'C101.',
+			'C1010',
+			'C1011',
+			'C101y',
+			'C101z',
+			'C102.',
+			'C102z',
+			'C103.',
+			'C1030',
+			'C1031',
+			'C103y',
+			'C104.',
+			'C104y',
+			'C104z',
+			'C105.',
+			'C105y',
+			'C105z',
+			'C106.',
+			'C1061',
+			'C106y',
+			'C106z',
+			'C107.',
+			'C107z',
+			'C108.',
+			'C1080',
+			'C1081',
+			'C1082',
+			'C1083',
+			'C1085',
+			'C1086',
+			'C1087',
+			'C1088',
+			'C1089',
+			'C108A',
+			'C108B',
+			'C108C',
+			'C108D',
+			'C108E',
+			'C108F',
+			'C108J',
+			'C108y',
+			'C108z',
+			'C109.',
+			'C1090',
+			'C1091',
+			'C1092',
+			'C1093',
+			'C1094',
+			'C1095',
+			'C1096',
+			'C1097',
+			'C1099',
+			'C109A',
+			'C109B',
+			'C109C',
+			'C109D',
+			'C109E',
+			'C109F',
+			'C109G',
+			'C109H',
+			'C109J',
+			'C10A1',
+			'C10B0',
+			'C10C.',
+			'C10D.',
+			'C10E.',
+			'C10E0',
+			'C10E1',
+			'C10E2',
+			'C10E3',
+			'C10E5',
+			'C10E6',
+			'C10E7',
+			'C10E8',
+			'C10E9',
+			'C10EA',
+			'C10EB',
+			'C10EC',
+			'C10ED',
+			'C10EE',
+			'C10EF',
+			'C10EJ',
+			'C10EK',
+			'C10EL',
+			'C10EM',
+			'C10EN',
+			'C10EP',
+			'C10EQ',
+			'C10ER',
+			'C10F.',
+			'C10F0',
+			'C10F1',
+			'C10F2',
+			'C10F3',
+			'C10F4',
+			'C10F5',
+			'C10F6',
+			'C10F7',
+			'C10F9',
+			'C10FA',
+			'C10FB',
+			'C10FC',
+			'C10FD',
+			'C10FE',
+			'C10FF',
+			'C10FG',
+			'C10FH',
+			'C10FJ',
+			'C10FL',
+			'C10FM',
+			'C10FN',
+			'C10FP',
+			'C10FQ',
+			'C10FR',
+			'C10H.',
+			'C10y.',
+			'C10yy',
+			'C10z.',
+			'C10zz',
+			'Cyu2.',
+			'Cyu23',
+			'F1711',
+			'F372.',
+			'F3720',
+			'F3721',
+			'F3722',
+			'F3813',
+			'F3y0.',
+			'F420.',
+			'F4200',
+			'F4204',
+			'F4206',
+			'F420z',
+			'F42y9',
+			'F4640',
+			'M2710' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF8 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF8 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '1491.',
+			'1B5..',
+			'1B53.',
+			'F56..',
+			'F561.',
+			'F5610',
+			'F5611',
+			'F5614',
+			'F561z',
+			'F562.',
+			'F562z',
+			'FyuQ1',
+			'R004.',
+			'R0040',
+			'R0043',
+			'R0044' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF9 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF9 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '173..',
+			'1732.',
+			'1733.',
+			'1734.',
+			'1738.',
+			'1739.',
+			'173C.',
+			'173K.',
+			'173Z.',
+			'2322.',
+			'R0608',
+			'R060A' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF10 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF10 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			((EVENT_CD = '16D2.'
+			AND EVENT_VAL > 0 )
+			OR (EVENT_CD IN ( '16D..',
+			'16D1.',
+			'8HTl.',
+			'8Hk1.',
+			'8O9..',
+			'R200.',
+			'TC...',
+			'TC5..',
+			'TCz..' )))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF11 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF11 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '13G8.',
+			'9N08.',
+			'9N1y7',
+			'9N2Q.',
+			'M20..',
+			'M2000' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF12 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF12 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '14G6.',
+			'14G7.',
+			'14G8.',
+			'7K1D0',
+			'7K1D6',
+			'7K1H6',
+			'7K1H8',
+			'7K1J0',
+			'7K1J6',
+			'7K1J8',
+			'7K1JB',
+			'7K1JD',
+			'7K1Jd',
+			'7K1L4',
+			'7K1LL',
+			'7K1Y0',
+			'N1y1.',
+			'N331.',
+			'N3311',
+			'N331A',
+			'N331D',
+			'N331G',
+			'N331H',
+			'N331J',
+			'N331K',
+			'N331L',
+			'N331M',
+			'N331N',
+			'NyuB0',
+			'S10..',
+			'S1000',
+			'S1005',
+			'S1006',
+			'S1007',
+			'S100H',
+			'S100K',
+			'S102.',
+			'S1020',
+			'S1021',
+			'S102y',
+			'S102z',
+			'S1031',
+			'S104.',
+			'S1040',
+			'S1041',
+			'S1042',
+			'S10A0',
+			'S10B.',
+			'S10B0',
+			'S10B6',
+			'S112.',
+			'S114.',
+			'S1145',
+			'S15..',
+			'S150.',
+			'S1500',
+			'S23..',
+			'S234.',
+			'S2341',
+			'S2346',
+			'S2351',
+			'S23B.',
+			'S23C.',
+			'S23x1',
+			'S23y.',
+			'S3...',
+			'S30..',
+			'S300.',
+			'S3000',
+			'S3001',
+			'S3004',
+			'S3005',
+			'S3006',
+			'S3007',
+			'S3009',
+			'S300y',
+			'S300z',
+			'S3010',
+			'S3015',
+			'S302.',
+			'S3020',
+			'S3021',
+			'S3022',
+			'S3023',
+			'S3024',
+			'S302z',
+			'S303.',
+			'S3030',
+			'S3032',
+			'S3034',
+			'S304.',
+			'S305.',
+			'S30y.',
+			'S30z.',
+			'S31z.',
+			'S4500',
+			'S4E..',
+			'S4E0.',
+			'S4E1.',
+			'S4E2.' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF13 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF13 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '1C12.',
+			'1C13.',
+			'1C131',
+			'1C132',
+			'1C133',
+			'1C16.',
+			'2BM2.',
+			'2BM3.',
+			'2BM4.',
+			'2DG..',
+			'3134.',
+			'31340',
+			'8D2..',
+			'8E3..',
+			'8HR2.',
+			'8HT2.',
+			'8HT3.',
+			'Eu446',
+			'F5801',
+			'F59..',
+			'F590.',
+			'F591.',
+			'F5912',
+			'F5915',
+			'F5916',
+			'F592.',
+			'F594.',
+			'F595.',
+			'F59z.',
+			'F5A..',
+			'ZV532' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF14 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF14 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '14A6.',
+			'14AM.',
+			'1736.',
+			'1O1..',
+			'33BA.',
+			'388D.',
+			'585f.',
+			'662T.',
+			'662W.',
+			'662g.',
+			'662h.',
+			'662p.',
+			'679X.',
+			'67D4.',
+			'8CL3.',
+			'8H2S.',
+			'8HBE.',
+			'8HHb.',
+			'8HHz.',
+			'9N0k.',
+			'9N2p.',
+			'9N4s.',
+			'9N4w.',
+			'9N6T.',
+			'9Or0.',
+			'9Or5.',
+			'9hH0.',
+			'9hH1.',
+			'G58..',
+			'G580.',
+			'G5800',
+			'G5801',
+			'G5804',
+			'G581.',
+			'G582.',
+			'G58z.',
+			'G5y4z',
+			'G5yy9',
+			'SP111' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF15 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF15 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( 'G540.',
+			'G5402',
+			'G5415',
+			'G543.' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF16 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF16 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '13CA.',
+			'8HL..',
+			'9N1C.',
+			'9NF..',
+			'9NF1.',
+			'9NF2.',
+			'9NF3.',
+			'9NF8.',
+			'9NF9.',
+			'9NFB.',
+			'9NFM.' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF17 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF17 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			((EVENT_CD = '246W.'
+			AND EVENT_VAL > 135 )
+			OR (EVENT_CD = '246V.'
+			AND EVENT_VAL > 85 )
+			OR (EVENT_CD IN ( '14A2.',
+			'246M.',
+			'6627.',
+			'6628.',
+			'662F.',
+			'662O.',
+			'662b.',
+			'8CR4.',
+			'8HT5.',
+			'8I3N.',
+			'9N03.',
+			'9N1y2',
+			'9h3..',
+			'9h31.',
+			'9h32.',
+			'F4211',
+			'F4213',
+			'G2...',
+			'G20..',
+			'G200.',
+			'G201.',
+			'G202.',
+			'G203.',
+			'G20z.',
+			'G22z.',
+			'G24..',
+			'G240.',
+			'G240z',
+			'G241.',
+			'G241z',
+			'G244.',
+			'G24z.',
+			'G24z0',
+			'G24z1',
+			'G24zz',
+			'G2z..',
+			'Gyu20',
+			'Gyu21' )))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF18 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF18 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '1B55.',
+			'1B6..',
+			'1B62.',
+			'1B65.',
+			'1B68.',
+			'79370',
+			'F1303',
+			'G87..',
+			'G870.',
+			'G871.',
+			'G872.',
+			'G873.',
+			'G87z.',
+			'R002.',
+			'R0021',
+			'R0022',
+			'R0023',
+			'R0042' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF19 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF19 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '14A..',
+			'14A4.',
+			'14A5.',
+			'182..',
+			'322..',
+			'3222.',
+			'322Z.',
+			'662K0',
+			'662K1',
+			'662K3',
+			'6A2..',
+			'6A4..',
+			'792..',
+			'7928.',
+			'79294',
+			'889A.',
+			'8H2V.',
+			'8I3z.',
+			'G3...',
+			'G30..',
+			'G3071',
+			'G308.',
+			'G30y.',
+			'G30yz',
+			'G30z.',
+			'G31..',
+			'G311.',
+			'G3111',
+			'G31y2',
+			'G31y3',
+			'G31yz',
+			'G32..',
+			'G33..',
+			'G332.',
+			'G33z.',
+			'G33z3',
+			'G33z4',
+			'G33z7',
+			'G33zz',
+			'G34..',
+			'G340.',
+			'G344.',
+			'G34y0',
+			'G34y1',
+			'G34yz',
+			'G34z.',
+			'G36..',
+			'G361.',
+			'G362.',
+			'G37..',
+			'G3y..',
+			'G3z..',
+			'Gyu3.',
+			'G3...',
+			'Gyu30' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF20 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF20 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			((EVENT_CD = '3AD3.'
+			AND (EVENT_VAL > 8
+			OR EVENT_VAL = 8))
+			OR (EVENT_CD IN ( '1461.',
+			'1B1A.',
+			'1S21.',
+			'2841.',
+			'28E..',
+			'3A10.',
+			'3A20.',
+			'3A30.',
+			'3A40.',
+			'3A50.',
+			'3A60.',
+			'3A70.',
+			'3A80.',
+			'3A91.',
+			'3AA1.',
+			'3AE..',
+			'66h..',
+			'6AB..',
+			'8HTY.',
+			'9NdL.',
+			'9Nk1.',
+			'9Ou..',
+			'9Ou2.',
+			'9Ou3.',
+			'9Ou4.',
+			'9Ou5.',
+			'9hD..',
+			'9hD0.',
+			'9hD1.',
+			'E00..',
+			'E000.',
+			'E001.',
+			'E0010',
+			'E0011',
+			'E0012',
+			'E0013',
+			'E001z',
+			'E002.',
+			'E0020',
+			'E0021',
+			'E002z',
+			'E003.',
+			'E004.',
+			'E0040',
+			'E0041',
+			'E0042',
+			'E0043',
+			'E004z',
+			'E012.',
+			'E041.',
+			'E2A10',
+			'E2A11',
+			'Eu00.',
+			'Eu000',
+			'Eu001',
+			'Eu002',
+			'Eu00z',
+			'Eu01.',
+			'Eu010',
+			'Eu011',
+			'Eu012',
+			'Eu013',
+			'Eu01y',
+			'Eu01z',
+			'Eu02.',
+			'Eu020',
+			'Eu021',
+			'Eu022',
+			'Eu023',
+			'Eu025',
+			'Eu02y',
+			'Eu02z',
+			'Eu041',
+			'Eu057',
+			'F110.',
+			'F1100',
+			'F1101',
+			'F116.',
+			'F21y2',
+			'R00z0' )))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF21 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF21 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '1381.',
+			'13C2.',
+			'13C4.',
+			'13CD.',
+			'13CE.',
+			'398A.',
+			'39B..',
+			'8D4..',
+			'8O15.',
+			'N097.',
+			'ZV4L0' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF22 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF22 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			((EVENT_CD = '58EE.'
+			AND (EVENT_VAL <-2.5
+			OR EVENT_VAL = -2.5) )
+			OR (EVENT_CD IN ( '14OD.',
+			'56812',
+			'58EN.',
+			'66a..',
+			'66a2.',
+			'66a3.',
+			'66a4.',
+			'66a5.',
+			'66a6.',
+			'66a7.',
+			'66a8.',
+			'66a9.',
+			'66aA.',
+			'66aE.',
+			'8HTS.',
+			'9N0h.',
+			'9Od0.',
+			'9Od2.',
+			'N330.',
+			'N3300',
+			'N3301',
+			'N3302',
+			'N3303',
+			'N3304',
+			'N3305',
+			'N3306',
+			'N3307',
+			'N3308',
+			'N330A',
+			'N330B',
+			'N330C',
+			'N330D',
+			'N330z',
+			'N3312',
+			'N3315',
+			'N3316',
+			'N3318',
+			'N3319',
+			'N331B',
+			'N331L',
+			'N3370',
+			'NyuB0',
+			'NyuB1',
+			'NyuB8',
+			'NyuBC' )))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF23 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF23 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '297A.',
+			'2987.',
+			'2994.',
+			'A94y1',
+			'F116.',
+			'F11x9',
+			'F12..',
+			'F120.',
+			'F121.',
+			'F12W.',
+			'F12X.',
+			'F12z.',
+			'F13..',
+			'F1303',
+			'Fyu20',
+			'Fyu21',
+			'Fyu22',
+			'Fyu29',
+			'Fyu2B',
+			'R0103',
+			'TJ64.',
+			'U6067' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF24 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF24 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '14C1.',
+			'1956.',
+			'76121',
+			'761D5',
+			'761D6',
+			'761J.',
+			'761J0',
+			'761J1',
+			'761Jy',
+			'761Jz',
+			'7627.',
+			'76270',
+			'76271',
+			'76272',
+			'7627y',
+			'7627z',
+			'J1016',
+			'J1020',
+			'J11..',
+			'J110.',
+			'J1100',
+			'J1101',
+			'J1102',
+			'J1103',
+			'J1104',
+			'J110y',
+			'J110z',
+			'J111.',
+			'J1110',
+			'J1111',
+			'J1112',
+			'J1114',
+			'J111y',
+			'J111z',
+			'J112.',
+			'J113.',
+			'J113z',
+			'J11y.',
+			'J11y0',
+			'J11y1',
+			'J11y2',
+			'J11yz',
+			'J11z.',
+			'J12..',
+			'J120.',
+			'J1200',
+			'J1201',
+			'J1202',
+			'J1203',
+			'J120y',
+			'J120z',
+			'J121.',
+			'J1210',
+			'J1211',
+			'J1212',
+			'J1213',
+			'J1214',
+			'J121y',
+			'J121z',
+			'J122.',
+			'J124.',
+			'J125.',
+			'J126.',
+			'J126z',
+			'J12y.',
+			'J12y0',
+			'J12y1',
+			'J12y2',
+			'J12y3',
+			'J12y4',
+			'J12yy',
+			'J12yz',
+			'J12z.',
+			'J13..',
+			'J130.',
+			'J1300',
+			'J1301',
+			'J1302',
+			'J1303',
+			'J130y',
+			'J130z',
+			'J131.',
+			'J1310',
+			'J1311',
+			'J1312',
+			'J131y',
+			'J131z',
+			'J13y.',
+			'J13y0',
+			'J13y1',
+			'J13y2',
+			'J13yz',
+			'J13z.',
+			'J14..',
+			'J1401',
+			'J1411',
+			'J14y.',
+			'J14z.',
+			'J17y8',
+			'J57y8',
+			'ZV12C' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF25 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF25 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			((EVENT_CD = '585a.'
+			AND EVENT_VAL < 0.95)
+			OR (EVENT_CD IN ( '24E9.',
+			'24EA.',
+			'24EC.',
+			'24F9.',
+			'C107.',
+			'C1086',
+			'C109F',
+			'C10E6',
+			'C10FF',
+			'G670.',
+			'G700.',
+			'G73..',
+			'G73z.',
+			'G73zz',
+			'M2710' )))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF26 ( ALF_PE BIGINT,
+	event_dt DATE,
+	DEF26 BIGINT ) DISTRIBUTE BY HASH(ALF_PE);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF26 (
+			SELECT SUB.ALF_PE,
+			sub.event_dt,
+			MAX(SUB.RANK)
+		FROM
+			(
+				SELECT ALF_PE,
+				A.event_dt AS event_dt,
+				DENSE_RANK() OVER (PARTITION BY ALF_PE
+			ORDER BY
+				EVENT_CD) AS RANK
+			FROM
+				SAILW1169V.GPDATA AS B
+			JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+					USING (ALF_PE)
+			WHERE
+				B.EVENT_DT <= A.EVENT_DT
+				AND B.EVENT_DT >= A.EVENT_DT - 1 YEARS
+				AND (substr(EVENT_CD,
+				1,
+				1) <> UPPER(substr(EVENT_CD, 1, 1)) ) ) AS SUB
+		GROUP BY
+			SUB.ALF_PE ,
+			sub.event_dt);
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF27 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF27 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '13F6.',
+			'13F61',
+			'13FX.',
+			'13G6.',
+			'13G61',
+			'13WJ.',
+			'8GEB.',
+			'918F.',
+			'9N1G.' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF28 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF28 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			((EVENT_CD = '66Yf.'
+			AND EVENT_VAL > 0)
+			OR (EVENT_CD IN ( '14B..',
+			'14B3.',
+			'14B4.',
+			'14OX.',
+			'1712.',
+			'1713.',
+			'1715.',
+			'171A.',
+			'173A.',
+			'178..',
+			'1780.',
+			'1O2..',
+			'3399.',
+			'339U.',
+			'33G0.',
+			'388t.',
+			'663..',
+			'663J.',
+			'663N.',
+			'663N0',
+			'663N1',
+			'663N2',
+			'663O.',
+			'663O0',
+			'663P.',
+			'663Q.',
+			'663U.',
+			'663V.',
+			'663V0',
+			'663V1',
+			'663V2',
+			'663V3',
+			'663W.',
+			'663d.',
+			'663e.',
+			'663f.',
+			'663h.',
+			'663j.',
+			'663l.',
+			'663m.',
+			'663n.',
+			'663p.',
+			'663q.',
+			'663r.',
+			'663s.',
+			'663t.',
+			'663u.',
+			'663v.',
+			'663w.',
+			'663x.',
+			'663y.',
+			'66Y5.',
+			'66Y9.',
+			'66YA.',
+			'66YB.',
+			'66YD.',
+			'66YE.',
+			'66YI.',
+			'66YJ.',
+			'66YK.',
+			'66YL.',
+			'66YM.',
+			'66YP.',
+			'66YQ.',
+			'66YR.',
+			'66YS.',
+			'66YT.',
+			'66YZ.',
+			'66Yd.',
+			'66Ye.',
+			'66Yf.',
+			'66Yg.',
+			'66Yh.',
+			'66Yi.',
+			'679J.',
+			'679V.',
+			'74592',
+			'8764.',
+			'8776.',
+			'8778.',
+			'8793.',
+			'8794.',
+			'8795.',
+			'8796.',
+			'8797.',
+			'8798.',
+			'8B3j.',
+			'8CR0.',
+			'8CR1.',
+			'8FA..',
+			'8FA1.',
+			'8H2P.',
+			'8H2R.',
+			'8H7u.',
+			'8HTT.',
+			'9N1d.',
+			'9N4Q.',
+			'9N4W.',
+			'9OJ1.',
+			'9OJ2.',
+			'9OJ3.',
+			'9OJ7.',
+			'9OJA.',
+			'9Oi3.',
+			'9h52.',
+			'9hA1.',
+			'9hA2.',
+			'9kf..',
+			'9kf0.',
+			'G401.',
+			'G4011',
+			'G410.',
+			'G41y0',
+			'H....',
+			'H3...',
+			'H30..',
+			'H302.',
+			'H31..',
+			'H310.',
+			'H3100',
+			'H310z',
+			'H311.',
+			'H3110',
+			'H3111',
+			'H312.',
+			'H3120',
+			'H3122',
+			'H312z',
+			'H31y.',
+			'H31yz',
+			'H31z.',
+			'H32..',
+			'H33..',
+			'H330.',
+			'H3300',
+			'H3301',
+			'H330z',
+			'H331.',
+			'H3310',
+			'H3311',
+			'H331z',
+			'H332.',
+			'H333.',
+			'H334.',
+			'H33z.',
+			'H33z0',
+			'H33z1',
+			'H33z2',
+			'H33zz',
+			'H36..',
+			'H37..',
+			'H38..',
+			'H39..',
+			'H3y..',
+			'H3y0.',
+			'H3y1.',
+			'H3z..',
+			'H564.',
+			'Hyu31',
+			'N04y0',
+			'R062.',
+			'TJF73',
+			'U60F6',
+			'ZV129' )))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF29 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF29 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '14F3.',
+			'14F5.',
+			'2924.',
+			'2FF..',
+			'2FF2.',
+			'2FF3.',
+			'2FFZ.',
+			'2G48.',
+			'2G54.',
+			'2G55.',
+			'2G5H.',
+			'2G5L.',
+			'2G5V.',
+			'2G5W.',
+			'39C..',
+			'39C0.',
+			'4JG3.',
+			'7G2E5',
+			'7G2EA',
+			'7G2EB',
+			'7G2EC',
+			'81H1.',
+			'8CT1.',
+			'8CV2.',
+			'8HTh.',
+			'9N0t.',
+			'9NM5.',
+			'C1094',
+			'C10F4',
+			'G830.',
+			'G832.',
+			'G835.',
+			'G837.',
+			'M07z.',
+			'M27..',
+			'M270.',
+			'M271.',
+			'M2710',
+			'M2711',
+			'M2712',
+			'M2713',
+			'M2714',
+			'M2715',
+			'M272.',
+			'M27y.',
+			'M27z.' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF30 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF30 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '1B1B.',
+			'1B1Q.',
+			'E274.',
+			'Eu51.',
+			'Fy02.',
+			'R005.',
+			'R0050',
+			'R0052' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF31 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF31 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '1335.',
+			'133P.',
+			'133V.',
+			'13EH.',
+			'13F3.',
+			'13G4.',
+			'13M1.',
+			'13MF.',
+			'13Z8.',
+			'1B1K.',
+			'8H75.',
+			'8HHB.',
+			'8I5..',
+			'918V.',
+			'9NNV.',
+			'ZV603' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF32 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF32 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			((EVENT_CD = '44lD.'
+			AND EVENT_VAL > 15)
+			OR (EVENT_CD = '442W.'
+			AND EVENT_VAL NOT BETWEEN 0.5 AND 4)
+			OR (EVENT_CD = '442A.'
+			AND EVENT_VAL NOT BETWEEN 0.5 AND 4)
+			OR (EVENT_CD IN ( '1431.',
+			'1432.',
+			'4422.',
+			'442I.',
+			'66BB.',
+			'66BZ.',
+			'8CR5.',
+			'9N4T.',
+			'9Oj0.',
+			'C0...',
+			'C02..',
+			'C04..',
+			'C040.',
+			'C041.',
+			'C0410',
+			'C041z',
+			'C042.',
+			'C043.',
+			'C043z',
+			'C044.',
+			'C046.',
+			'C04y.',
+			'C04z.',
+			'C1343',
+			'Cyu1.',
+			'Cyu11' )))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF33 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF33 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '1593.',
+			'16F..',
+			'1A23.',
+			'1A24.',
+			'1A26.',
+			'3940.',
+			'3941.',
+			'7B338',
+			'7B33C',
+			'7B421',
+			'8D7..',
+			'8D71.',
+			'8HTX.',
+			'K198.',
+			'K586.',
+			'Kyu5A',
+			'R083.',
+			'R0831',
+			'R0832',
+			'R083z' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF34 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF34 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '14D..',
+			'14DZ.',
+			'1A1..',
+			'1A13.',
+			'1A1Z.',
+			'1A55.',
+			'1AA..',
+			'1AC2.',
+			'7B39.',
+			'7B390',
+			'8156.',
+			'8H5B.',
+			'K....',
+			'K155.',
+			'K1653',
+			'K1654',
+			'K16y4',
+			'K190.',
+			'K1903',
+			'K1905',
+			'K190z',
+			'K1971',
+			'K1973',
+			'K20..',
+			'Ky...',
+			'Kz...',
+			'R08..',
+			'R082.',
+			'R0822',
+			'SP031' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF35 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF35 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			(EVENT_CD IN ( '1483.',
+			'1B75.',
+			'22E5.',
+			'22EG.',
+			'2BBm.',
+			'2BBn.',
+			'2BBo.',
+			'2BBr.',
+			'2BT..',
+			'2BT0.',
+			'2BT1.',
+			'6688.',
+			'6689.',
+			'72630',
+			'72661',
+			'8F61.',
+			'8H52.',
+			'9m08.',
+			'C108F',
+			'C109E',
+			'C10EF',
+			'C10EP',
+			'C10FE',
+			'C10FQ',
+			'F4042',
+			'F421A',
+			'F422.',
+			'F422y',
+			'F422z',
+			'F4239',
+			'F425.',
+			'F4250',
+			'F4251',
+			'F4252',
+			'F4253',
+			'F4254',
+			'F4257',
+			'F427C',
+			'F42y4',
+			'F42y9',
+			'F4305',
+			'F4332',
+			'F46..',
+			'F4602',
+			'F4603',
+			'F4604',
+			'F4605',
+			'F4606',
+			'F4607',
+			'F460z',
+			'F461.',
+			'F4610',
+			'F4614',
+			'F4615',
+			'F4617',
+			'F4618',
+			'F4619',
+			'F461A',
+			'F461B',
+			'F461y',
+			'F461z',
+			'F462.',
+			'F462z',
+			'F463.',
+			'F4633',
+			'F4634',
+			'F463z',
+			'F464.',
+			'F4640',
+			'F4642',
+			'F4644',
+			'F4646',
+			'F4647',
+			'F464z',
+			'F465.',
+			'F4650',
+			'F465z',
+			'F466.',
+			'F46y.',
+			'F46yz',
+			'F46z.',
+			'F46z0',
+			'F4840',
+			'F49..',
+			'F490.',
+			'F4900',
+			'F4909',
+			'F490z',
+			'F494.',
+			'F4950',
+			'F495A',
+			'F49z.',
+			'F4A24',
+			'F4H34',
+			'F4H40',
+			'F4H73',
+			'F4K2D',
+			'FyuE1',
+			'FyuF7',
+			'FyuL.',
+			'P33..',
+			'P330.',
+			'P331.',
+			'P3310',
+			'P3311',
+			'P331z',
+			'S813.',
+			'SJ0z.' ))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+
+CREATE TABLE
+	SAILW1169V.VB_EFI_DEF36 ( ALF_PE BIGINT,
+	event_dt DATE ,
+	EVENT_CD CHAR(30)) DISTRIBUTE BY HASH(ALF_PE,
+	EVENT_CD);
+
+INSERT
+	INTO
+		SAILW1169V.VB_EFI_DEF36 (
+			SELECT ALF_PE,
+			A.event_dt ,
+			COUNT(EVENT_CD)
+		FROM
+			SAILW1169V.GPDATA AS B
+		JOIN SAILW1169V.COHORT_WITH_DUMMY_DATE AS A
+				USING (ALF_PE)
+		WHERE
+			((EVENT_CD = '687C.'
+			AND (EVENT_VAL > 1
+			OR EVENT_VAL = 1))
+			OR (EVENT_CD IN ( '1612.',
+			'1615.',
+			'1623.',
+			'1625.',
+			'1D1A.',
+			'22A8.',
+			'R0300',
+			'R032.' )))
+			AND B.EVENT_DT <= A.EVENT_DT
+			AND B.EVENT_DT >= A.EVENT_DT - 10 YEARS
+		GROUP BY
+			ALF_PE,
+			A.event_dt );
+			
+		-----------------------Join tables
+--drop table SAILW1169V.VB_EFI_INDICATOR_dummy
+		
+CREATE TABLE SAILW1169V.VB_EFI_INDICATOR_dummy (
+                      ALF_PE BIGINT ,event_dt date
+                      , DEF1 BIGINT
+                      , DEF2 BIGINT
+                      , DEF3 BIGINT
+                      , DEF4 BIGINT
+                      , DEF5 BIGINT
+                      , DEF6 BIGINT
+                      , DEF7 BIGINT
+                      , DEF8 BIGINT
+                      , DEF9 BIGINT
+                      , DEF10 BIGINT
+                      , DEF11 BIGINT
+                      , DEF12 BIGINT
+                      , DEF13 BIGINT
+                      , DEF14 BIGINT
+                      , DEF15 BIGINT
+                      , DEF16 BIGINT
+                      , DEF17 BIGINT
+                      , DEF18 BIGINT
+                      , DEF19 BIGINT
+                      , DEF20 BIGINT
+                      , DEF21 BIGINT
+                      , DEF22 BIGINT
+                      , DEF23 BIGINT
+                      , DEF24 BIGINT
+                      , DEF25 BIGINT
+                      , DEF26 BIGINT
+                      , DEF27 BIGINT
+                      , DEF28 BIGINT
+                      , DEF29 BIGINT
+                      , DEF30 BIGINT
+                      , DEF31 BIGINT
+                      , DEF32 BIGINT
+                      , DEF33 BIGINT
+                      , DEF34 BIGINT
+                      , DEF35 BIGINT
+                      , DEF36 BIGINT )
+                      DISTRIBUTE BY HASH(ALF_PE);
+		
+		INSERT INTO SAILW1169V.VB_EFI_INDICATOR_dummy  (
+                      select COHORT.ALF_PE  ,cohort.event_dt , DUMMY1.EVENT_CD AS  dummy_def1 ,  DUMMY2.EVENT_CD AS dummy_def2 ,  DUMMY3.EVENT_CD AS dummy_def3 ,  DUMMY4.EVENT_CD AS dummy_def4 ,  DUMMY5.EVENT_CD AS dummy_def5 ,  DUMMY6.EVENT_CD AS dummy_def6 ,  DUMMY7.EVENT_CD AS dummy_def7 ,  DUMMY8.EVENT_CD AS dummy_def8 ,  DUMMY9.EVENT_CD AS dummy_def9 ,  DUMMY10.EVENT_CD AS dummy_def10 ,  DUMMY11.EVENT_CD AS dummy_def11 ,  DUMMY12.EVENT_CD AS dummy_def12 ,  DUMMY13.EVENT_CD AS dummy_def13 ,  DUMMY14.EVENT_CD AS dummy_def14 ,  DUMMY15.EVENT_CD AS dummy_def15 ,  DUMMY16.EVENT_CD AS dummy_def16 ,  DUMMY17.EVENT_CD AS dummy_def17 ,  DUMMY18.EVENT_CD AS dummy_def18 ,  DUMMY19.EVENT_CD AS dummy_def19 ,  DUMMY20.EVENT_CD AS dummy_def20 ,  DUMMY21.EVENT_CD AS dummy_def21 ,  DUMMY22.EVENT_CD AS dummy_def22 ,  DUMMY23.EVENT_CD AS dummy_def23 ,  DUMMY24.EVENT_CD AS dummy_def24 ,  DUMMY25.EVENT_CD AS dummy_def25 ,  DUMMY26.def26 AS dummy_def26 ,  DUMMY27.EVENT_CD AS dummy_def27 ,  DUMMY28.EVENT_CD AS dummy_def28 ,  DUMMY29.EVENT_CD AS dummy_def29 ,  DUMMY30.EVENT_CD AS dummy_def30 ,  DUMMY31.EVENT_CD AS dummy_def31 ,  DUMMY32.EVENT_CD AS dummy_def32 ,  DUMMY33.EVENT_CD AS dummy_def33 ,  DUMMY34.EVENT_CD AS dummy_def34 ,  DUMMY35.EVENT_CD AS dummy_def35 ,  DUMMY36.EVENT_CD AS dummy_def36 
+                      from SAILW1169V.COHORT_WITH_DUMMY_DATE  AS COHORT
+                      LEFT JOIN  SAILW1169V.VB_EFI_DEF1  AS  DUMMY1  ON COHORT.ALF_PE = DUMMY1.ALF_PE and COHORT.event_dt = DUMMY1.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF2   AS  DUMMY2  ON COHORT.ALF_PE = DUMMY2.ALF_PE and COHORT.event_dt = DUMMY2.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF3   AS  DUMMY3  ON COHORT.ALF_PE = DUMMY3.ALF_PE and COHORT.event_dt = DUMMY3.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF4   AS  DUMMY4  ON COHORT.ALF_PE = DUMMY4.ALF_PE and COHORT.event_dt = DUMMY4.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF5   AS  DUMMY5  ON COHORT.ALF_PE = DUMMY5.ALF_PE and COHORT.event_dt = DUMMY5.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF6   AS  DUMMY6  ON COHORT.ALF_PE = DUMMY6.ALF_PE and COHORT.event_dt = DUMMY6.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF7   AS  DUMMY7  ON COHORT.ALF_PE = DUMMY7.ALF_PE and COHORT.event_dt = DUMMY7.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF8   AS  DUMMY8  ON COHORT.ALF_PE = DUMMY8.ALF_PE and COHORT.event_dt = DUMMY8.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF9   AS  DUMMY9  ON COHORT.ALF_PE = DUMMY9.ALF_PE and COHORT.event_dt = DUMMY9.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF10   AS  DUMMY10  ON COHORT.ALF_PE = DUMMY10.ALF_PE and COHORT.event_dt = DUMMY10.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF11   AS  DUMMY11  ON COHORT.ALF_PE = DUMMY11.ALF_PE and COHORT.event_dt = DUMMY11.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF12   AS  DUMMY12  ON COHORT.ALF_PE = DUMMY12.ALF_PE and COHORT.event_dt = DUMMY12.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF13   AS  DUMMY13  ON COHORT.ALF_PE = DUMMY13.ALF_PE and COHORT.event_dt = DUMMY13.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF14   AS  DUMMY14  ON COHORT.ALF_PE = DUMMY14.ALF_PE and COHORT.event_dt = DUMMY14.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF15   AS  DUMMY15  ON COHORT.ALF_PE = DUMMY15.ALF_PE and COHORT.event_dt = DUMMY15.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF16   AS  DUMMY16  ON COHORT.ALF_PE = DUMMY16.ALF_PE and COHORT.event_dt = DUMMY16.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF17   AS  DUMMY17  ON COHORT.ALF_PE = DUMMY17.ALF_PE and COHORT.event_dt = DUMMY17.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF18   AS  DUMMY18  ON COHORT.ALF_PE = DUMMY18.ALF_PE and COHORT.event_dt = DUMMY18.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF19   AS  DUMMY19  ON COHORT.ALF_PE = DUMMY19.ALF_PE and COHORT.event_dt = DUMMY19.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF20   AS  DUMMY20  ON COHORT.ALF_PE = DUMMY20.ALF_PE and COHORT.event_dt = DUMMY20.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF21   AS  DUMMY21  ON COHORT.ALF_PE = DUMMY21.ALF_PE and COHORT.event_dt = DUMMY21.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF22   AS  DUMMY22  ON COHORT.ALF_PE = DUMMY22.ALF_PE and COHORT.event_dt = DUMMY22.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF23   AS  DUMMY23  ON COHORT.ALF_PE = DUMMY23.ALF_PE and COHORT.event_dt = DUMMY23.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF24   AS  DUMMY24  ON COHORT.ALF_PE = DUMMY24.ALF_PE and COHORT.event_dt = DUMMY24.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF25   AS  DUMMY25  ON COHORT.ALF_PE = DUMMY25.ALF_PE and COHORT.event_dt = DUMMY25.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF26   AS  DUMMY26  ON COHORT.ALF_PE = DUMMY26.ALF_PE and COHORT.event_dt = DUMMY26.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF27   AS  DUMMY27  ON COHORT.ALF_PE = DUMMY27.ALF_PE and COHORT.event_dt = DUMMY27.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF28   AS  DUMMY28  ON COHORT.ALF_PE = DUMMY28.ALF_PE and COHORT.event_dt = DUMMY28.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF29   AS  DUMMY29  ON COHORT.ALF_PE = DUMMY29.ALF_PE and COHORT.event_dt = DUMMY29.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF30   AS  DUMMY30  ON COHORT.ALF_PE = DUMMY30.ALF_PE and COHORT.event_dt = DUMMY30.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF31   AS  DUMMY31  ON COHORT.ALF_PE = DUMMY31.ALF_PE and COHORT.event_dt = DUMMY31.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF32   AS  DUMMY32  ON COHORT.ALF_PE = DUMMY32.ALF_PE and COHORT.event_dt = DUMMY32.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF33   AS  DUMMY33  ON COHORT.ALF_PE = DUMMY33.ALF_PE and COHORT.event_dt = DUMMY33.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF34   AS  DUMMY34  ON COHORT.ALF_PE = DUMMY34.ALF_PE and COHORT.event_dt = DUMMY34.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF35   AS  DUMMY35  ON COHORT.ALF_PE = DUMMY35.ALF_PE and COHORT.event_dt = DUMMY35.event_dt
+                      LEFT JOIN   SAILW1169V.VB_EFI_DEF36   AS  DUMMY36  ON COHORT.ALF_PE = DUMMY36.ALF_PE and COHORT.event_dt = DUMMY36.event_dt);
+		
+		
+		----------------DROP ALL tables
+
+DROP TABLE SAILW1169V.VB_EFI_DEF1;
+DROP TABLE SAILW1169V.VB_EFI_DEF2;
+DROP TABLE SAILW1169V.VB_EFI_DEF3;
+DROP TABLE SAILW1169V.VB_EFI_DEF4;
+DROP TABLE SAILW1169V.VB_EFI_DEF5;
+DROP TABLE SAILW1169V.VB_EFI_DEF6;
+DROP TABLE SAILW1169V.VB_EFI_DEF7;
+DROP TABLE SAILW1169V.VB_EFI_DEF8;
+DROP TABLE SAILW1169V.VB_EFI_DEF9;
+DROP TABLE SAILW1169V.VB_EFI_DEF10;
+DROP TABLE SAILW1169V.VB_EFI_DEF11;
+DROP TABLE SAILW1169V.VB_EFI_DEF12;
+DROP TABLE SAILW1169V.VB_EFI_DEF13;
+DROP TABLE SAILW1169V.VB_EFI_DEF14;
+DROP TABLE SAILW1169V.VB_EFI_DEF15;
+DROP TABLE SAILW1169V.VB_EFI_DEF16;
+DROP TABLE SAILW1169V.VB_EFI_DEF17;
+DROP TABLE SAILW1169V.VB_EFI_DEF18;
+DROP TABLE SAILW1169V.VB_EFI_DEF19;
+DROP TABLE SAILW1169V.VB_EFI_DEF20;
+DROP TABLE SAILW1169V.VB_EFI_DEF21;
+DROP TABLE SAILW1169V.VB_EFI_DEF22;
+DROP TABLE SAILW1169V.VB_EFI_DEF23;
+DROP TABLE SAILW1169V.VB_EFI_DEF24;
+DROP TABLE SAILW1169V.VB_EFI_DEF25;
+DROP TABLE SAILW1169V.VB_EFI_DEF26;
+DROP TABLE SAILW1169V.VB_EFI_DEF27;
+DROP TABLE SAILW1169V.VB_EFI_DEF28;
+DROP TABLE SAILW1169V.VB_EFI_DEF29;
+DROP TABLE SAILW1169V.VB_EFI_DEF30;
+DROP TABLE SAILW1169V.VB_EFI_DEF31;
+DROP TABLE SAILW1169V.VB_EFI_DEF32;
+DROP TABLE SAILW1169V.VB_EFI_DEF33;
+DROP TABLE SAILW1169V.VB_EFI_DEF34;
+DROP TABLE SAILW1169V.VB_EFI_DEF35;
+DROP TABLE SAILW1169V.VB_EFI_DEF36;
+
+------------------------------------
+CREATE TABLE SAILW1169V.VB_EFI_INDICATOR AS 
+(SELECT * FROM SAILW1169V.VB_EFI_INDICATOR_dummy) WITH NO DATA;
+
+
+INSERT INTO SAILW1169V.VB_EFI_INDICATOR 
+                      select ALF_PE ,event_dt , CASE WHEN def1 IS NULL THEN 0 ELSE 1 END AS  DEF1 , CASE WHEN def2 IS NULL THEN 0 ELSE 1 END AS DEF2 ,  CASE WHEN def3 IS NULL THEN 0 ELSE 1 END AS DEF3 ,  CASE WHEN def4 IS NULL THEN 0 ELSE 1 END AS DEF4 ,  CASE WHEN def5 IS NULL THEN 0 ELSE 1 END AS DEF5 ,  CASE WHEN def6 IS NULL THEN 0 ELSE 1 END AS DEF6 ,  CASE WHEN def7 IS NULL THEN 0 ELSE 1 END AS DEF7 ,  CASE WHEN def8 IS NULL THEN 0 ELSE 1 END AS DEF8 ,  CASE WHEN def9 IS NULL THEN 0 ELSE 1 END AS DEF9 ,  CASE WHEN def10 IS NULL THEN 0 ELSE 1 END AS DEF10 ,  CASE WHEN def11 IS NULL THEN 0 ELSE 1 END AS DEF11 ,  CASE WHEN def12 IS NULL THEN 0 ELSE 1 END AS DEF12 ,  CASE WHEN def13 IS NULL THEN 0 ELSE 1 END AS DEF13 ,  CASE WHEN def14 IS NULL THEN 0 ELSE 1 END AS DEF14 ,  CASE WHEN def15 IS NULL THEN 0 ELSE 1 END AS DEF15 ,  CASE WHEN def16 IS NULL THEN 0 ELSE 1 END AS DEF16 ,  CASE WHEN def17 IS NULL THEN 0 ELSE 1 END AS DEF17 , CASE WHEN def18 IS NULL THEN 0 ELSE 1 END AS DEF18 ,  CASE WHEN def19 IS NULL THEN 0 ELSE 1 END AS DEF19 ,  CASE WHEN def20 IS NULL THEN 0 ELSE 1 END AS DEF20 ,  CASE WHEN def21 IS NULL THEN 0 ELSE 1 END AS DEF21 ,  CASE WHEN def22 IS NULL THEN 0 ELSE 1 END AS DEF22 ,  CASE WHEN def23 IS NULL THEN 0 ELSE 1 END AS DEF23 ,  CASE WHEN def24 IS NULL THEN 0 ELSE 1 END AS DEF24 ,  CASE WHEN def25 IS NULL THEN 0 ELSE 1 END AS DEF25 ,  CASE WHEN def26 IS NULL OR def26 < 5 THEN 0 ELSE 1 END AS DEF26 ,  CASE WHEN def27 IS NULL THEN 0 ELSE 1 END AS DEF27 ,  CASE WHEN def28 IS NULL THEN 0 ELSE 1 END AS DEF28 ,  CASE WHEN def29 IS NULL THEN 0 ELSE 1 END AS DEF29 ,  CASE WHEN def30 IS NULL THEN 0 ELSE 1 END AS DEF30 ,  CASE WHEN def31 IS NULL THEN 0 ELSE 1 END AS DEF31 ,  CASE WHEN def32 IS NULL THEN 0 ELSE 1 END AS DEF32 ,  CASE WHEN def33 IS NULL THEN 0 ELSE 1 END AS DEF33 ,  CASE WHEN def34 IS NULL THEN 0 ELSE 1 END AS DEF34 ,  CASE WHEN def35 IS NULL THEN 0 ELSE 1 END AS DEF35 ,  CASE WHEN def36 IS NULL THEN 0 ELSE 1 END AS DEF36 FROM SAILW1169V.VB_EFI_INDICATOR_dummy ;
+
+
+-----------------------------------------------
+
+-----------------------------------------------
+
+CREATE TABLE SAILW1169V.VB_EFI_sub (
+                      ALF_PE BIGINT ,event_dt date
+                      , DEF1 BIGINT
+                      , DEF2 BIGINT
+                      , DEF3 BIGINT
+                      , DEF4 BIGINT
+                      , DEF5 BIGINT
+                      , DEF6 BIGINT
+                      , DEF7 BIGINT
+                      , DEF8 BIGINT
+                      , DEF9 BIGINT
+                      , DEF10 BIGINT
+                      , DEF11 BIGINT
+                      , DEF12 BIGINT
+                      , DEF13 BIGINT
+                      , DEF14 BIGINT
+                      , DEF15 BIGINT
+                      , DEF16 BIGINT
+                      , DEF17 BIGINT
+                      , DEF18 BIGINT
+                      , DEF19 BIGINT
+                      , DEF20 BIGINT
+                      , DEF21 BIGINT
+                      , DEF22 BIGINT
+                      , DEF23 BIGINT
+                      , DEF24 BIGINT
+                      , DEF25 BIGINT
+                      , DEF26 BIGINT
+                      , DEF27 BIGINT
+                      , DEF28 BIGINT
+                      , DEF29 BIGINT
+                      , DEF30 BIGINT
+                      , DEF31 BIGINT
+                      , DEF32 BIGINT
+                      , DEF33 BIGINT
+                      , DEF34 BIGINT
+                      , DEF35 BIGINT
+                      , DEF36 BIGINT
+                      , Defict_sum bigint
+                      , eFI decimal(6,4))
+                      DISTRIBUTE BY HASH(ALF_PE);
+                     
+ INSERT INTO SAILW1169V.VB_EFI_sub (
+ 
+SELECT * , DEF1 + DEF2 + DEF3 + DEF4 + DEF5 + DEF6 + DEF7 + DEF8 + DEF9 + DEF10 + DEF11 + DEF12 + DEF13 + DEF14 + DEF15 + DEF16 + DEF17 + DEF18 + DEF19 + DEF20 + DEF21 + DEF22 + DEF23 + DEF24 + DEF25 + DEF26 + DEF27 + DEF28 + DEF29 + DEF30 + DEF31 + DEF32 + DEF33 + DEF34 + DEF35 + DEF36 AS deficit_sum , CAST( (DEF1 + DEF2 + DEF3 + DEF4 + DEF5 + DEF6 + DEF7 + DEF8 + DEF9 + DEF10 + DEF11 + DEF12 + DEF13 + DEF14 + DEF15 + DEF16 + DEF17 + DEF18 + DEF19 + DEF20 + DEF21 + DEF22 + DEF23 + DEF24 + DEF25 + DEF26 + DEF27 + DEF28 + DEF29 + DEF30 + DEF31 + DEF32 + DEF33 + DEF34 + DEF35 + DEF36) AS decimal(6,4))/36 AS eFI FROM SAILW1169V.VB_EFI_INDICATOR);
+
+DROP TABLE SAILW1169V.VB_EFI_INDICATOR_dummy;
+
+
+
+CREATE TABLE SAILW1169V.VB_EFI AS (
+SELECT
+	* ,
+	CASE
+		WHEN (EFI > 0.12 AND EFI <= 0.24) THEN 1
+		WHEN (EFI > 0.24 AND EFI <= 0.36) THEN 2 
+		WHEN (EFI > 0.36) THEN 3
+		ELSE 0 
+		END 
+		AS frailty
+		,
+	CASE
+		WHEN (EFI > 0.12 AND EFI <= 0.24) THEN 'Mild'
+		WHEN (EFI > 0.24 AND EFI <= 0.36) THEN 'Moderate'
+		WHEN (EFI > 0.36) THEN 'Severe'
+		ELSE 'Fit'
+		END 
+		AS frailty_def
+	FROM
+		SAILW1169V.VB_EFI_sub) WITH NO DATA;
+	
+
+		INSERT INTO SAILW1169V.VB_EFI (SELECT
+	* ,
+	CASE
+		WHEN (EFI > 0.12 AND EFI <= 0.24) THEN 1
+		WHEN (EFI > 0.24 AND EFI <= 0.36) THEN 2 
+		WHEN (EFI > 0.36) THEN 3
+		ELSE 0 
+		END 
+		AS frailty
+		,
+	CASE
+		WHEN (EFI > 0.12 AND EFI <= 0.24) THEN 'Mild'
+		WHEN (EFI > 0.24 AND EFI <= 0.36) THEN 'Moderate'
+		WHEN (EFI > 0.36) THEN 'Severe'
+		ELSE 'Fit'
+		END 
+		AS frailty_def
+	FROM
+		SAILW1169V.VB_EFI_sub);
+		
+		DROP TABLE SAILW1169V.VB_EFI_sub;
+DROP TABLE SAILW1169V.COHORT_WITH_DUMMY_DATE;
+DROP TABLE SAILW1169V.VB_EFI_INDICATOR;
+
+/* Update cohort3 table with efi as at pAbx start date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN EFI INTEGER;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SAILW1169V.VB_EFI AS efi
+		ON coh.ALF_PE = efi.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.EFI = efi.FRAILTY
+			;
+			
+--------------------------------------------------------------------------------------------------------------
+		
+/* update cohort table with diabetes
+Link all cohort3 first pAbx events to gp event to identify any events with diabetes read codes
+Identify first event date for any episode with a recorded diabetes read code */
+		
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_DIABETES AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_DIABETES
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('1434.','3881.','3882.','3883.','6761.','7276.','9360.','9m0A.','9NND.','9OL..','13AB.','13AC.',
+												'13B1.','14F4.','14P3.','2BBF.','2BBJ.','2BBK.','2BBk.','2BBL.','2BBl.','2BBM.','2BBo.','2BBP.',
+												'2BBQ.','2BBR.','2BBr.','2BBS.','2BBT.','2BBV.','2BBW.','2BBX.','2G510','2G5A.','2G5B.','2G5C.',
+												'2G5d.','2G5E.','2G5e.','2G5F.','2G5G.','2G5H.','2G5I.','2G5J.','2G5K.','2G5L.','2G5V.','2G5W.',
+												'42c..','42c0.','42c1.','42c2.','42W..','42W1.','42W2.','42W3.','42WZ.','661N4','66A..','66A1.',
+												'66A2.','66A3.','66A4.','66A5.','66A6.','66A7.','66A70','66A71','66A8.','66A9.','66AA.','66Aa.',
+												'66AB.','66Ab.','66AC.','66Ac.','66Ad.','66AD.','66AE.','66Ae.','66Ae0','66Af.','66AG.','66Ag.',
+												'66AH.','66Ah.','66AH0','66AH1','66AH2','66AI.','66Ai.','66AJ.','66AJ.','66Aj.','66AJ0','66AJ1',
+												'66AJ2','66AJ3','66AJz','66AK.','66Ak.','66AL.','66Al.','66AM.','66Am.','66An.','66AN.','66An.',
+												'66Ao.','66AO.','66Ao.','66AP.','66Ap.','66AQ.','66Aq.','66AQ0','66AQ1','66Ar.','66AR.','66As.',
+												'66AS.','66AS0','66AT.','66At.','66At0','66At0','66At1','66At1','66AU.','66Au.','66AV.','66Av.',
+												'66AW.','66Aw.','66AX.','66Ax.','66AY.','66AZ.','66b1.','66o..','671F0','679c.','679L.','679L0',
+												'679L1','679L2','679L2','679R.','67D8.','67IJ1','68A7.','68A9.','68AB.','7L100','7L100','7L198',
+												'7L19J','889A.','8A12.','8A13.','8A17.','8B3l.','8BAi.','8BAj.','8BAm.','8BL2.','8CA41','8CAQ.',
+												'8CE01','8CE02','8CMW7','8CP2.','8CR2.','8CR2.','8CS0.','8H2J.','8H3O.','8H4e.','8H4F.','8H7C.',
+												'8H7f.','8H7r.','8HBG.','8HBH.','8Hg4.','8HgC.','8HHy.','8Hj0.','8Hj3.','8Hj4.','8Hj5.','8HKE.',
+												'8Hl1.','8Hl4.','8Hlc.','8HLE.','8HME.','8HTe.','8HTE1','8HTi.','8HTk.','8HVU.','8I2P.','8I2S.',
+												'8I3k.','8I3W.','8I3X.','8I57.','8I6F.','8I6G.','8I7B.','8I7C.','8I81.','8I82.','8I83.','8I84.',
+												'8IAs.','8IE2.','8IEa.','8IEQ.','8IF..','8OA3.','93C4.','9b920','9h4..','9h41.','9h42.','9kL..',
+												'9M00.','9m00.','9M10.','9N0m.','9N0n.','9N0o.','9N1i.','9N1o.','9N1Q.','9N1v.','9N2d.','9N2i.',
+												'9N4I.','9N4p.','9NiA.','9NiC.','9NiD.','9NiE.','9NiZ.','9Nl4.','9NM0.','9NN8.','9NN9.','9OL..',
+												'9OL1.','9OL2.','9OL3.','9OL4.','9OL5.','9OL6.','9OL7.','9OL8.','9OL9.','9OL9.','9OLA.','9OLA.',
+												'9OLA.','9OLA.','9OLB.','9OLD.','9OLE.','9OLF.','9OLG.','9OLH.','9OLJ.','9OLK.','9OLL.','9OLM.',
+												'9OLN.','9OLZ.','9Oy..','9Oy0.','9Oy00','9Oy02','9Oy03','9Oy04','C10..','C100.','C1000','C1000',
+												'C1001','C1001','C100z','C101.','C1010','C1011','C101y','C101z','C102.','C1020','C1021','C102z',
+												'C103.','C1030','C1031','C103y','C103z','C104.','C104.','C1040','C1041','C104y','C104z','C105.',
+												'C1050','C1051','C105y','C105z','C106.','C106.','C106.','C106.','C1060','C1061','C106y','C106z',
+												'C107.','C107.','C107.','C1070','C1071','C1072','C1073','C1074','C107y','C107z','C108.','C108.',
+												'C108.','C108.','C1080','C1080','C1080','C1081','C1081','C1081','C1082','C1082','C1082','C1083',
+												'C1083','C1083','C1084','C1084','C1084','C1085','C1085','C1085','C1086','C1086','C1086','C1087',
+												'C1087','C1087','C1088','C1088','C1088','C1089','C1089','C1089','C108A','C108A','C108A','C108B',
+												'C108B','C108B','C108C','C108C','C108C','C108D','C108D','C108D','C108E','C108E','C108E','C108F',
+												'C108F','C108F','C108G','C108G','C108G','C108H','C108H','C108H','C108J','C108J','C108J','C108y',
+												'C108z','C109.','C109.','C109.','C109.','C1090','C1090','C1090','C1091','C1091','C1091','C1092',
+												'C1092','C1092','C1093','C1093','C1093','C1094','C1094','C1094','C1095','C1095','C1095','C1096',
+												'C1096','C1096','C1097','C1097','C1097','C1099','C1099','C1099','C109A','C109A','C109A','C109B',
+												'C109B','C109B','C109C','C109C','C109C','C109D','C109D','C109D','C109E','C109E','C109E','C109F',
+												'C109F','C109F','C109G','C109G','C109G','C109H','C109H','C109H','C109J','C109J','C109J','C109K',
+												'C10A0','C10A1','C10A2','C10A3','C10A4','C10A5','C10A6','C10A7','C10AW','C10AX','C10B.','C10B0',
+												'C10C.','C10C.','C10C.','C10D.','C10D.','C10E.','C10E.','C10E.','C10E0','C10E0','C10E0','C10E1',
+												'C10E1','C10E1','C10E2','C10E2','C10E2','C10E3','C10E3','C10E3','C10E4','C10E4','C10E4','C10E5',
+												'C10E5','C10E5','C10E6','C10E6','C10E6','C10E7','C10E7','C10E7','C10E8','C10E8','C10E8','C10E9',
+												'C10E9','C10E9','C10EA','C10EA','C10EA','C10EB','C10EB','C10EB','C10EC','C10EC','C10EC','C10ED',
+												'C10ED','C10ED','C10EE','C10EE','C10EE','C10EF','C10EF','C10EF','C10EG','C10EG','C10EG','C10EH',
+												'C10EH','C10EH','C10EJ','C10EJ','C10EJ','C10EK','C10EK','C10EL','C10EL','C10EM','C10EM','C10EN',
+												'C10EN','C10EP','C10EP','C10EQ','C10EQ','C10ER','C10F.','C10F.','C10F0','C10F0','C10F1','C10F1',
+												'C10F2','C10F2','C10F3','C10F3','C10F4','C10F4','C10F5','C10F5','C10F6','C10F6','C10F7','C10F7',
+												'C10F9','C10F9','C10FA','C10FA','C10FB','C10FB','C10FC','C10FC','C10FD','C10FD','C10FE','C10FE',
+												'C10FF','C10FF','C10FG','C10FG','C10FH','C10FH','C10FJ','C10FJ','C10FK','C10FK','C10FL','C10FL',
+												'C10FM','C10FM','C10FN','C10FN','C10FP','C10FP','C10FQ','C10FQ','C10FR','C10FR','C10FS','C10G.',
+												'C10G0','C10H.','C10H0','C10K.','C10K0','C10M.','C10M0','C10N.','C10N0','C10N1','C10P.','C10P0',
+												'C10P0','C10P1','C10P1','C10y.','C10y1','C10yy','C10yz','C10z.','C10z0','C10z1','C10zy','C10zz',
+												'C11y0','C314.','C3500','Cyu2.','Cyu20','Cyu23','F1711','F3450','F35z0','F372.','F372.','F372.',
+												'F3720','F3721','F3722','F3813','F3813','F3y0.','F420.','F4200','F4201','F4202','F4203','F4204',
+												'F4205','F4206','F4207','F4208','F420z','F4407','F4640','G73y0','K01x1','K01x1','K08yA','K08yA',
+												'K27y7','Kyu03','L1805','L1806','L180X','M0372','M21yC','M21yC','M2710','M2711','M2712','N0300',
+												'N0300','N0301','R0542','R0543','R1057','Ryu8A','TJ23.','TJ230','TJ232','TJ233','TJ234','TJ235',
+												'TJ238','TJ239','TJ23A','TJ23B','TJ23z','U6023','U6023','U6023','U6023','U6023','U6023','U6023',
+												'U6023','U6023','U6023','U6023','ZC2C8','ZC2C9','ZC2CA','ZL225','ZL625','ZL626','ZLA25','ZLD75',
+												'ZRB4.','ZRB4.','ZRB5.','ZRB5.','ZRB6.','ZRB6.','ZRBa.','ZRbH.','ZV653','ZV6DA','ZV6DB','1IA..',
+												'44T9.','44UZ.','44Uz.','44V3.','661M4','661N4','6761.','7276.','8A18.','8A19.','8A1A.','8BAp.',
+												'9360.','9NJy.','9h43.','9m0..','9m01.','9m03.','9m04.','9m05.','9m06.','9m07.','9m08.','9m0C.',
+												'9m0D.','9m0E.','C110.','C1100'
+												))
+				SELECT coh.ALF_PE,
+						min(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;
+
+/* Update cohort3 table with the prior diabetes date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN DIAB INTEGER
+	ADD COLUMN FIRST_DIABETES_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_DIABETES AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.FIRST_DIABETES_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET DIAB = CASE WHEN FIRST_DIABETES_DT IS NOT NULL	
+					THEN 1
+				ELSE 0
+			END;
+			
+----------------------------------------------------------------------------------------------------------------------
+		
+/* update cohort table with cancer
+Link all cohort3 pabx events to PEDW Diag to identify any episodes with cancer ICD-10 codes
+Identify first event date for any episode with a recorded cancer ICD-10 code */	
+		
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_CANCER AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_CANCER
+							(ALF_PE,
+							EVENT_DT)
+				WITH canc AS
+	(SELECT PROV_UNIT_CD,
+			SPELL_NUM_PE,
+			EPI_NUM,
+			DIAG_CD_1234
+			FROM SAIL1169V.PEDW_DIAG_20210704
+			WHERE DIAG_CD_1234 IN ('C00','C000','C001','C002','C003','C004','C005','C006','C008','C009','C01','C02','C020','C021',
+									'C022','C023','C024','C028','C029','C03','C030','C031','C039','C04','C040','C041','C048','C049',
+									'C05','C050','C051','C052','C058','C059','C06','C060','C061','C062','C068','C069','C07','C08',
+									'C080','C081','C088','C089','C09','C090','C091','C098','C099','C10','C100','C101','C102','C103',
+									'C104','C108','C109','C11','C110','C111','C112','C113','C118','C119','C12','C13','C130','C131',
+									'C132','C138','C139','C14','C140','C142','C148','C15','C150','C151','C152','C153','C154','C155',
+									'C158','C159','C16','C160','C161','C162','C163','C164','C165','C166','C168','C169','C17','C170',
+									'C171','C172','C173','C178','C179','C18','C180','C181','C182','C183','C184','C185','C186','C187',
+									'C188','C189','C19','C20','C21','C210','C211','C212','C218','C22','C220','C221','C222','C223',
+									'C224','C227','C229','C23','C24','C240','C241','C248','C249','C25','C250','C251','C252','C253',
+									'C254','C257','C258','C259','C26','C260','C261','C268','C269','C30','C300','C301','C31','C310',
+									'C311','C312','C313','C318','C319','C32','C320','C321','C322','C323','C328','C329','C33','C34',
+									'C340','C341','C342','C343','C348','C349','C37','C38','C380','C381','C382','C383','C384','C388',
+									'C39','C390','C398','C399','C40','C400','C401','C402','C403','C408','C409','C41','C410','C411',
+									'C412','C413','C414','C418','C419','C43','C430','C431','C432','C433','C434','C435','C436','C437',
+									'C438','C439','C45','C450','C451','C452','C457','C459','C46','C460','C461','C462','C463','C467',
+									'C468','C469','C47','C470','C471','C472','C473','C474','C475','C476','C478','C479','C48','C480',
+									'C481','C482','C488','C49','C490','C491','C492','C493','C494','C495','C496','C498','C499','C50',
+									'C500','C501','C502','C503','C504','C505','C506','C508','C509','C51','C510','C511','C512','C518',
+									'C519','C52','C53','C530','C531','C538','C539','C54','C540','C541','C542','C543','C548','C549',
+									'C55','C56','C57','C570','C571','C572','C573','C574','C577','C578','C579','C58','C64','C65','C66',
+									'C67','C670','C671','C672','C673','C674','C675','C676','C677','C678','C679','C68','C680','C681',
+									'C688','C689','C69','C690','C691','C692','C693','C694','C695','C696','C698','C699','C70','C700',
+									'C701','C709','C71','C710','C711','C712','C713','C714','C715','C716','C717','C718','C719','C72',
+									'C720','C721','C722','C723','C724','C725','C728','C729','C73','C74','C740','C741','C749','C75',
+									'C750','C751','C752','C753','C754','C755','C758','C759','C76','C760','C761','C762','C763','C764',
+									'C765','C767','C768','C77','C770','C771','C772','C773','C774','C775','C778','C779','C78','C780',
+									'C781','C782','C783','C784','C785','C786','C787','C788','C79','C790','C791','C792','C793','C794',
+									'C795','C796','C797','C798','C799','C80','C800','C809','C81','C810','C811','C812','C813','C814',
+									'C817','C819','C82','C820','C821','C822','C823','C824','C825','C826','C827','C829','C83','C830',
+									'C831','C833','C835','C837','C838','C839','C84','C840','C841','C844','C845','C846','C847','C848',
+									'C849','C85','C851','C852','C857','C859','C86','C860','C861','C862','C863','C864','C865','C866',
+									'C88','C880','C882','C883','C884','C887','C889','C90','C900','C901','C902','C903','C91','C910',
+									'C911','C913','C914','C915','C916','C917','C918','C919','C92','C920','C921','C922','C923','C924',
+									'C925','C926','C927','C928','C929','C93','C930','C931','C933','C937','C939','C94','C940','C942',
+									'C943','C944','C946','C947','C95','C950','C951','C957','C959','C96','C960','C962','C964','C965',
+									'C966','C967','C968','C969','C97'
+								)),
+								CTE AS 
+							(SELECT sp.ALF_PE, sp.ALF_STS_CD, eps.EPI_STR_DT, canc.DIAG_CD_1234 FROM CANC
+							LEFT JOIN SAIL1169V.PEDW_EPISODE_20210704 AS eps
+								ON canc.PROV_UNIT_CD = eps.PROV_UNIT_CD
+								AND canc.SPELL_NUM_PE = eps.SPELL_NUM_PE
+								AND canc.EPI_NUM = eps.EPI_NUM
+							LEFT JOIN SAIL1169V.PEDW_SPELL_20210704 AS sp
+								ON canc.PROV_UNIT_CD = sp.PROV_UNIT_CD
+								AND canc.SPELL_NUM_PE = sp.SPELL_NUM_PE
+					WHERE sp.ALF_PE IS NOT NULL
+					AND sp.ALF_STS_CD IN ('1','4','39')
+					)
+				SELECT coh.ALF_PE,
+						max(CTE.EPI_STR_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EPI_STR_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;
+
+/* Update cohort3 table with the prior cancer date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN CANCER INTEGER
+	ADD COLUMN LAST_CANCER_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_CANCER AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.LAST_CANCER_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET CANCER = CASE WHEN LAST_CANCER_DT IS NOT NULL
+				AND MONTHS_BETWEEN(PABX_STR, LAST_CANCER_DT) < 12
+					THEN 1
+				ELSE 0
+			END;
+			
+--------------------------------------------------------------------------------------------------------------
+		
+/* update cohort table with renal disease
+Link all cohort3 pabx events to gp event to identify any events with renal disease read codes
+Identify first event date for any episode with a recorded renal disease read code */		
+		
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_RENAL_DISEASE AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_RENAL_DISEASE
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('1Z12.','1Z13.','1Z14.','1Z15.','1Z16.','1Z1a.','1Z1B.','1Z1b.','1Z1C.','1Z1c.','1Z1D.','1Z1d.',
+												'1Z1E.','1Z1e.','1Z1F.','1Z1f.','1Z1G.','1Z1H.','1Z1J.','1Z1K.','1Z1L.','1Z1M.','1Z1N.','1Z1P.',
+												'1Z1Q.','1Z1R.','1Z1S.','1Z1T.','1Z1V.','1Z1W.','1Z1X.','1Z1Y.','1Z1Z.','661M2','661N2','66AJ.',
+												'66i..','6AA..','7A600','7A601','7A603','7A606','7A619','7A61A','7L1A.','7L1A0','7L1A1','7L1A2',
+												'7L1A3','7L1A4','7L1A5','7L1A6','7L1Ay','7L1Az','7L1B.','7L1B0','7L1B1','7L1B2','7L1By','7L1C.',
+												'7L1C0','7L1Cy','7L1Cz','7L1f0','9Ot..','D215.','D2150','G222.','G233.','G234.','G72C.','G72D.',
+												'G72D0','G72D1','G72D2','Gy1..','Gy10.','Gy2..','Gy21.','Gy3..','Gy30.','Gy31.','Gy4..','Gy40.',
+												'Gy41.','Gy5..','Gy51.','Gy60.','K05..','K050.','K053.','K054.','K055.','K060.','K08yA','K08z.',
+												'K0D..','K0E..','Kyu21','SP0E.','SP0E1','SP0F.','SP0G.','SP0H.','TA020','TA220','TA420','TB11.',
+												'U6122','Z9192','ZV451','ZV56.','ZV560','ZVu3G'
+												))
+				SELECT coh.ALF_PE,
+						min(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;					
+
+/* Update cohort3 table with the prior renal disease date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN RENAL_DISEASE INTEGER
+	ADD COLUMN FIRST_RENAL_DISEASE_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_RENAL_DISEASE AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.FIRST_RENAL_DISEASE_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET RENAL_DISEASE = CASE WHEN FIRST_RENAL_DISEASE_DT IS NOT NULL
+					THEN 1
+				ELSE 0
+			END;
+			
+--------------------------------------------------------------------------------------------------------------
+
+/* update cohort table with hypertension
+Link all cohort3 pAbx events to gp event to identify any events with hypertension read codes
+Identify first event date for any episode with a recorded hypertension read code */	
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_HYPERTENSION AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_HYPERTENSION
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('14A2.','662..','6627.','6628.','6629.','662b.','662c.','662d.','662F.','662G.','662O.','662P.',
+												'662P0','662q.','662r.','67H8.','7Q01.','7Q01y','8B26.','8BL0.','8CR4.','8HT5.','8I3N.','9h3..',
+												'9h31.','9h32.','9N03.','9N1y2','9N4L.','9OI..','9OI1.','9OI2.','9OI3.','9OI4.','9OI5.','9OI6.',
+												'9OI7.','9OI8.','9OI9.','9OIA.','9OIZ.','F4213','G2...','G20..','G200.','G201.','G202.','G203.',
+												'G20z.','G21..','G210.','G2100','G2101','G210z','G211.','G2110','G2111','G211z','G21z.','G21z0',
+												'G21z1','G21zz','G22..','G220.','G221.','G222.','G22z.','G23..','G230.','G231.','G232.','G233.',
+												'G234.','G23z.','G24..','G240.','G2400','G240z','G241.','G2410','G241z','G244.','G24z.','G24z0',
+												'G24z1','G24zz','G25..','G250.','G251.','G26..','G27..','G28..','G2y..','G2z..','G672.','Gyu2.',
+												'Gyu20','Gyu21','L122.','L1220','L1221','L1223','L122z','L127.','L127z','L128.','L1280','L1282',
+												'TJC7.','TJC7z','U60C5','61462','661M6','661N6','8IA5.','8IA6.','L120.','L1200','L1201','L1203',
+												'L1204','L120z','L121.','L1210','L1211','L1212','L1213','L1214','L121z','L1224'
+												))
+				SELECT coh.ALF_PE,
+						min(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;					
+
+/* Update cohort3 table with the prior hypertension date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN HTN INTEGER
+	ADD COLUMN FIRST_HYPERTENSION_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_HYPERTENSION AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.FIRST_HYPERTENSION_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET HTN = CASE WHEN FIRST_HYPERTENSION_DT IS NOT NULL	
+					THEN 1
+				ELSE 0
+			END;
+			
+------------------------------------------------------------------------------------------------
+
+/* update cohort table with cardiovascular disease / ischaemic heart disease
+Link all cohort3 pAbx events to gp event to identify any events with cardiovascular disease read codes
+Identify first event date for any episode with a recorded cardiovascular disease read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_IHD AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_IHD
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('32131','79200','79213','14A..','14A3.','14A4.','14A5.','14AA.','14AH.','14AJ.','14AL.','14AT.',
+												'14AW.','18...','182A.','187..','18Z..','18ZZ.','322..','3222.','322Z.','323..','3232.','3233.',
+												'3234.','3235.','3236.','323Z.','32B2.','32B3.','32E4.','5533.','5543.','5C11.','661M0','661N0',
+												'662..','662K.','662K0','662K1','662K2','662K3','662K4','662K5','662Kz','662N.','662Z.','66f..',
+												'66f1.','6A2..','6A4..','790H3','792..','7920.','79201','79202','79203','7920y','7920z','7921.',
+												'79210','79211','79212','7921y','7921z','7922.','79220','79221','79222','79223','7922y','7922z',
+												'7923.','79230','79231','79232','79233','7923y','7923z','7924.','79240','79241','79242','79243',
+												'79244','79245','7924y','7924z','7925.','79250','79251','79252','79253','79254','7925y','7925z',
+												'7926.','79260','79261','79262','79263','7926y','7926z','79273','79274','79275','7927y','7927z',
+												'7928.','79280','79281','79282','79283','7928y','7928z','7929.','79290','79291','79292','79293',
+												'79294','79295','79296','7929y','7929z','792A.','792Ay','792Az','792B.','792B0','792By','792Bz',
+												'792C.','792C0','792Cy','792Cz','792D.','792Dy','792Dz','792E.','792E0','792y.','792z.','793G.',
+												'793G0','793G1','793G2','793G3','793Gy','793Gz','793H.','793H0','7A201','7A202','7A207','7A545',
+												'7A547','7A548','7A560','7A564','7A64.','7A660','7A6G1','7A6H3','7A6H4','7M360','889A.','8B27.',
+												'8B3k.','8CMP.','8F9..','8F90.','8F91.','8F92.','8F93.','8H2V.','8H7v.','8I37.','8I3a.','8IEY.',
+												'8L40.','8L41.','8LF..','8T04.','9Ob..','9Ob0.','9Ob1.','9Ob2.','9Ob3.','9Ob4.','9Ob5.','9Ob6.',
+												'9Ob8.','9Ob9.','G....','G3...','G30..','G300.','G301.','G3010','G3011','G301z','G302.','G303.',
+												'G304.','G305.','G306.','G307.','G3070','G3071','G308.','G309.','G30A.','G30B.','G30X.','G30X0',
+												'G30y.','G30y0','G30y1','G30y2','G30yz','G30z.','G31..','G310.','G311.','G3110','G3111','G3112',
+												'G3113','G3114','G3115','G311z','G312.','G31y.','G31y0','G31y1','G31y2','G31y3','G31yz','G32..',
+												'G33..','G330.','G3300','G330z','G331.','G332.','G33z.','G33z0','G33z1','G33z2','G33z3','G33z4',
+												'G33z5','G33z6','G33z7','G33zz','G34..','G340.','G3400','G3401','G341.','G3410','G3411','G341z',
+												'G342.','G343.','G344.','G34y.','G34y0','G34y1','G34yz','G34z.','G34z0','G35..','G350.','G351.',
+												'G353.','G35X.','G36..','G360.','G361.','G362.','G363.','G364.','G365.','G366.','G37..','G38..',
+												'G380.','G381.','G382.','G383.','G384.','G38z.','G39..','G3y..','G3z..','G5...','G501.','G5740',
+												'G5y..','G5yX.','G5yyz','G5yz.','G5z..','G70..','Gyu3.','Gyu30','Gyu31','Gyu32','Gyu33','Gyu34',
+												'Gyu35','Gyu36','Gyu5.','Gyu5g','Gyu70','SP003','SP076','Z677.','ZL222','ZV457','ZV458','ZV45K',
+												'ZV45L','ZV579','ZV719'
+												))
+				SELECT coh.ALF_PE,
+						min(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;				
+
+/* Update cohort3 table with the prior cardiovascular disease / ischaemic heart disease date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN IHD INTEGER
+	ADD COLUMN FIRST_IHD_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_IHD AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.FIRST_IHD_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET IHD = CASE WHEN FIRST_IHD_DT IS NOT NULL	
+					THEN 1
+				ELSE 0
+			END;
+			
+------------------------------------------------------------------------------------------------
+
+/* update cohort table with cerebrovascular disease
+Link all cohort3 pAbx events to gp event to identify any events with cerebrovascular disease read codes
+Identify first event date for any episode with a recorded cerebrovascular disease read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_CVD AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_CVD
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('1477.','14A7.','14AB.','14AK.','2Ba22','5C13.','661M7','661N7','662e.','662M.','662M1','662M2',
+												'662o.','7P242','8CRB.','8HBJ.','8Hd6.','8HHM.','8HTQ.','8IEC.','9N0p.','9N4X.','9Om..','9Om0.',
+												'9Om1.','9Om2.','9Om3.','9Om4.','F11x2','F4236','Fyu55','Fyu57','G6...','G60..','G600.',
+												'G601.','G602.','G603.','G604.','G605.','G606.','G60X.','G60z.','G61..','G610.','G611.','G612.',
+												'G613.','G614.','G615.','G616.','G617.','G618.','G619.','G61X.','G61X0','G61X1','G61z.','G62..',
+												'G620.','G621.','G622.','G623.','G62z.','G63..','G630.','G631.','G632.','G633.','G63y.','G63y0',
+												'G63y1','G63z.','G64..','G640.','G6400','G641.','G6410','G64z.','G64z0','G64z1','G64z2','G64z3',
+												'G64z4','G65..','G650.','G651.','G6510','G652.','G653.','G654.','G656.','G657.','G65y.','G65z.',
+												'G65z0','G65z1','G65zz','G66..','G660.','G661.','G662.','G663.','G664.','G665.','G666.','G667.',
+												'G668.','G67..','G671.','G6710','G671z','G6760','G6770','G6771','G6772','G6773','G6774','G679.',
+												'G67y.','G67z.','G68..','G681.','G682.','G683.','G68W.','G68X.','G6W..','G6X..','G6y..','G6z..',
+												'Gyu6.','Gyu60','Gyu61','Gyu62','Gyu63','Gyu64','Gyu65','Gyu66','Gyu67','Gyu6A','Gyu6B','Gyu6C',
+												'Gyu6D','Gyu6E','Gyu6F','Gyu6G','L440.','ZLEP.','ZV125','ZV12D','1M4..'
+												))
+				SELECT coh.ALF_PE,
+						min(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;				
+
+/* Update cohort3 table with the prior cerebrovascular disease date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN CVD INTEGER
+	ADD COLUMN FIRST_CEREBROV_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_CVD AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.FIRST_CEREBROV_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET CVD = CASE WHEN FIRST_CEREBROV_DT IS NOT NULL	
+					THEN 1
+				ELSE 0
+			END;
+			
+--------------------------------------------------------------------------------------------------
+/* update cohort table with heart failure
+Link all cohort3 pAbx events to gp event to identify any events with heart failure read codes
+Identify first event date for any episode with a recorded heart failure read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_HEARTFAIL AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_HEARTFAIL
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('14A6.','14AM.','1736.','183B.','1O1..','2JZ..','33BA.','388D.','585f.','585g.','661M5','661N5',
+												'662f.','662g.','662h.','662i.','662p.','662T.','662W.','679W1','679X.','67D4.','8B29.','8CeC.',
+												'8CL3.','8CMK.','8CMW8','8H2S.','8H7o0','8HBE.','8Hg8.','8HgD.','8HHb.','8HHz.','8Hk0.','8HTL.',
+												'8HTL0','8IE0.','8IE1.','9h1..','9h11.','9h12.','9hH..','9hH0.','9hH1.','9N0k.','9N2p.','9N4s.',
+												'9N4w.','9N6T.','9On..','9On0.','9On1.','9On2.','9On3.','9On4.','9Or..','9Or0.','9Or1.','9Or2.',
+												'9Or3.','9Or4.','9Or5.','G1yz1','G2101','G2111','G21z1','G232.','G234.','G400.','G41z.','G5540',
+												'G58..','G580.','G5800','G5801','G5802','G5803','G5804','G581.','G5810','G582.','G583.','G584.',
+												'G58z.','G5y4z','G5yy9','G5yyA','G5yyB','G5yyE','H54..','H541.','H5410','H541z','H54z.','H584.',
+												'H5840','H584z','Q48y1','Q490.','R2y10','SP111','SP112','ZRad.'
+												))
+				SELECT coh.ALF_PE,
+						min(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;		
+
+/* Update cohort3 table with the prior heart failure date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN CCF INTEGER
+	ADD COLUMN FIRST_HEARTFAIL_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_HEARTFAIL AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.FIRST_HEARTFAIL_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET CCF = CASE WHEN FIRST_HEARTFAIL_DT IS NOT NULL
+					THEN 1
+				ELSE 0
+			END;
+			
+--------------------------------------------------------------------------------------------
+	
+/* update cohort table with multiple sclerosis
+Link all cohort3 pAbx events to gp event to identify any events with multiple sclerosis read codes
+Identify first event date for any episode with a recorded multiple sclerosis read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_MS AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_MS
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('666A.','666B.','8Cc0.','8Cc1.','8Cc2.','8Cc3.','8Cc4.','8CS1.','8Hkv.','8IAb.','9kG..','9mD..',
+												'9mD0.','9mD1.','9mD2.','9mD3.','F20..','F200.','F201.','F202.','F203.','F204.','F205.','F206.',
+												'F207.','F208.','F20z.','ZRVE.'
+												))
+				SELECT coh.ALF_PE,
+						min(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;		
+		
+/* Update cohort3 table with the prior multiple sclerosis date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN MS INTEGER
+	ADD COLUMN FIRST_MS_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_MS AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.FIRST_MS_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET MS = CASE WHEN FIRST_MS_DT IS NOT NULL	
+					THEN 1
+				ELSE 0
+			END;
+			
+------------------------------------------------------------------------------------------------
+	
+/* update cohort table with motor neurone disease
+Link all cohort3 pAbx events to gp event to identify any events with motor neurone disease read codes
+Identify first event date for any episode with a recorded motor neurone disease read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_MND AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_MND
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('7Q041','F15..','F152.','F1520','F1521','F1522','F1523','F1524','F152z','F15y.','F15z.'
+												))
+				SELECT coh.ALF_PE,
+						min(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;
+
+/* Update cohort3 table with the prior motor neurone disease date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN MND INTEGER
+	ADD COLUMN FIRST_MND_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_MND AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.FIRST_MND_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET MND = CASE WHEN FIRST_MND_DT IS NOT NULL	
+					THEN 1
+				ELSE 0
+			END;
+			
+------------------------------------------------------------------------------------------------
+	
+/* update cohort table with dementia
+Link all cohort3 pAbx events to gp event to identify any events with dementia read codes
+Identify first event date for any episode with a recorded dementia read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_DEMENTIA AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_DEMENTIA
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('1461.','3AE..','4L49.','66h..','6AB..','8BM02','8BM50','8BM60','8BPa.','8CET.','8CMe0','8CMG2',
+												'8CMZ.','8CMZ0','8CMZ1','8CMZ2','8CMZ3','8CSA.','8Hla.','8IAe0','8IAe2','8T05.','8T050','8T051',
+												'9hD..','9hD0.','9hD1.','9Ou..','9Ou1.','9Ou2.','9Ou3.','9Ou4.','9Ou5.','A411.','A4110','BBC9.',
+												'E00..','E000.','E001.','E0010','E0011','E0012','E0013','E001z','E002.','E0020','E0021','E002z',
+												'E003.','E004.','E0040','E0041','E0042','E0043','E004z','E00y.','E00z.','E0110','E0111','E0112',
+												'E012.','E0120','E02y1','E040.','E041.','Eu00.','Eu000','Eu001','Eu002','Eu00z','Eu01.','Eu010',
+												'Eu011','Eu012','Eu013','Eu01y','Eu01z','Eu02.','Eu020','Eu021','Eu022','Eu023','Eu025',
+												'Eu02y','Eu02z','Eu03.','Eu041','Eu057','Eu106','Eu107','Eu843','F10..','F1021','F103.','F1030',
+												'F1031','F103z','F10z.','F11..','F110.','F1100','F1101','F111.','F1110','F112.','F116.','F118.',
+												'F11x.','F11x0','F11x1','F11x2','F11x4','F11x5','F11x6','F11x7','F11x8','F11x9','F11xz','F11y.',
+												'F11y1','F11yz','F11z.','F12..','F12z.','F13..','F134.','F21y2','Fyu30','G5321','ZR1K.','ZR1T.',
+												'ZR2X.','ZR3V.','ZS7C5'
+												))
+				SELECT coh.ALF_PE,
+						min(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;		
+
+/* Update cohort3 table with the prior dementia date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN DEMENTIA INTEGER
+	ADD COLUMN FIRST_DEMENTIA_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_DEMENTIA AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.FIRST_DEMENTIA_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET DEMENTIA = CASE WHEN FIRST_DEMENTIA_DT IS NOT NULL	
+					THEN 1
+				ELSE 0
+			END;
+			
+------------------------------------------------------------------------------------------------
+/* update cohort table with parkinsons
+Link all cohort3 pAbx events to gp event to identify any events with parkinsons read codes
+Identify first event date for any episode with a recorded parkinsons read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_PARKINSONS AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_PARKINSONS
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('147F.','38GM.','8Hx0.','8T06.','8T060','9Nle.','Eu023','F11x9','F12..','F120.','F12z.'
+												))
+				SELECT coh.ALF_PE,
+						min(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;
+
+/* Update cohort3 table with the prior parkinson's date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN PD INTEGER
+	ADD COLUMN FIRST_PARKINSONS_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_PARKINSONS AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.FIRST_PARKINSONS_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET PD = CASE WHEN FIRST_PARKINSONS_DT IS NOT NULL	
+					THEN 1
+				ELSE 0
+			END;
+			
+------------------------------------------------------------------------------------------------
+
+/* update cohort table with serious mental health
+Link all cohort3 pabx events to gp event to identify any events with serious mental health read codes
+Identify first event date for any episode with a recorded serious mental health read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_SMH AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_SMH
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('13Y2.','13Y3.','1464.','146D.','146H.','212T.','212V.','212W.','9H8..','E1...','E10..','E100.',
+												'E1000','E1001','E1002','E1003','E1004','E1005','E100z','E101.','E1010','E1012','E1013','E1014',
+												'E1015','E101z','E102.','E1020','E1021','E1022','E1023','E1024','E1025','E102z','E103.','E1030',
+												'E1031','E1032','E1033','E1034','E1035','E103z','E104.','E105.','E1050','E1051','E1052','E1053',
+												'E1054','E1055','E105z','E106.','E107.','E1070','E1071','E1072','E1073','E1074','E1075','E107z',
+												'E10y.','E10y0','E10y1','E10yz','E10z.','E11..','E110.','E1100','E1101','E1102','E1103','E1104',
+												'E1105','E1106','E110z','E111.','E1110','E1111','E1112','E1113','E1114','E1115','E1116','E111z',
+												'E1124','E1134','E114.','E1140','E1141','E1142','E1143','E1144','E1145','E1146','E114z','E115.',
+												'E1150','E1151','E1152','E1153','E1154','E1155','E1156','E115z','E116.','E1160','E1161','E1162',
+												'E1163','E1164','E1165','E1166','E116z','E117.','E1170','E1171','E1172','E1173','E1174','E1175',
+												'E1176','E117z','E11y.','E11y0','E11y1','E11y3','E11yz','E11z.','E11z0','E11zz','E121.','E122.',
+												'E12z.','E13..','E130.','E131.','E133.','E134.','E13y.','E13y1','E13yz','E13z.','E1y..','E1z..',
+												'Eu2..','Eu20.','Eu200','Eu201','Eu202','Eu203','Eu204','Eu205','Eu206','Eu20y','Eu20z','Eu21.',
+												'Eu220','Eu221','Eu23.','Eu230','Eu231','Eu232','Eu233','Eu23y','Eu23z','Eu24.','Eu25.','Eu250',
+												'Eu251','Eu252','Eu25y','Eu25z','Eu26.','Eu2y.','Eu2z.','Eu30.','Eu300','Eu301','Eu302','Eu30y',
+												'Eu30z','Eu31.','Eu310','Eu311','Eu312','Eu313','Eu314','Eu315','Eu316','Eu317','Eu318','Eu319',
+												'Eu31y','Eu31z','Eu323','Eu328','Eu329','Eu32A','Eu332','Eu333','Eu3z.','Eu44.','Eu843','ZRby1',
+												'ZS7C6','ZV110','ZV111'
+												))
+				SELECT coh.ALF_PE,
+						min(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;
+
+/* Update cohort3 table with the prior serious mental health date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN SEVERE_MENT INTEGER
+	ADD COLUMN FIRST_SMH_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_SMH AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.FIRST_SMH_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET SEVERE_MENT = CASE WHEN FIRST_SMH_DT IS NOT NULL	
+					THEN 1
+				ELSE 0
+			END;
+			
+------------------------------------------------------------------------------------------------------
+
+/* update cohort table with asthma
+Link all cohort3 pabx events to gp event to identify any events with asthma read codes
+Identify first event date for any episode with a recorded asthma read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_ASTHMA AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_ASTHMA
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('14B4.','14Ok0','173A.','173c.','173d.','178..','1780.','1781.','1782.','1783.','1784.','1785.',
+												'1786.','1787.','1788.','1789.','178A.','178B.','1O2..','388t.','388t0','38B8.','38DL.','38DT.',
+												'38DV.','38QM.','661M1','661N1','663..','663d.','663e.','663e0','663e1','663f.','663h.','663J.',
+												'663j.','663m.','663N.','663n.','663N0','663N1','663N2','663O.','663O0','663P.','663p.','663P0',
+												'663P1','663P2','663Q.','663q.','663r.','663s.','663t.','663U.','663u.','663V.','663v.','663V0',
+												'663V1','663V2','663V3','663W.','663w.','663x.','663y.','66Y5.','66Y9.','66YA.','66YC.','66YE.',
+												'66YJ.','66YK.','66YP.','66Yp.','66YQ.','66Yq.','66YR.','66Yr.','66Ys.','66Yu.','66YZ.','66Yz0',
+												'66Yz5','679J.','679J0','679J1','679J2','8791.','8793.','8794.','8795.','8796.','8797.','8798.',
+												'8B3j.','8CE2.','8CMA0','8CR0.','8H2P.','8HTT.','9hA..','9hA1.','9hA2.','9N1d.','9N1d0','9N4Q.',
+												'9NI8.','9NNX.','9OJ..','9OJ1.','9OJ2.','9OJ3.','9OJ4.','9OJ5.','9OJ6.','9OJ7.','9OJ8.','9OJA.',
+												'9OJB.','9OJB0','9OJB1','9OJB2','9OJC.','9OJZ.','9Q21.','H3120','H33..','H330.','H3300','H3301',
+												'H330z','H331.','H3310','H3311','H331z','H332.','H333.','H334.','H335.','H33z.','H33z0','H33z1',
+												'H33z2','H33zz','H35y6','H35y7','H3B..','H47y0','TJF73','U60F6'
+												))
+				SELECT coh.ALF_PE,
+						min(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;							
+
+/* Update cohort3 table with the prior asthma date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN ASTHMA INTEGER
+	ADD COLUMN FIRST_ASTHMA_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_ASTHMA AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.FIRST_ASTHMA_DT = gpev.EVENT_DT
+			;
+		
+/*Link all cohort3 rUTI events to gp event to identify any events with asthma medication read codes
+Identify first event date for any episode with a recorded asthma medication read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_ASTHMA_MED AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_ASTHMA_MED
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('c131.','c133.','c134.','c135.','c136.','c137.','c138.','c139.','c13A.','c13B.','c13C.','c13D.',
+												'c13E.','c13F.','c13G.','c13H.','c13I.','c13J.','c13K.','c13L.','c13M.','c13N.','c13O.','c13P.',
+												'c13Q.','c13R.','c13S.','c13T.','c13U.','c13V.','c13W.','c13X.','c13Y.','c13Z.','c13a.','c13c.',
+												'c13d.','c13e.','c13f.','c13g.','c13h.','c13i.','c13j.','c13k.','c13l.','c13m.','c13n.','c13o.',
+												'c13p.','c13q.','c13r.','c13s.','c13v.','c13w.','c13x.','c13y.','c13z.','c141.','c142.','c144.',
+												'c145.','c146.','c147.','c148.','c149.','c14f.','c14g.','c14i.','c14j.','c14k.','c14r.','c14t.',
+												'c14u.','c14v.','c14w.','c14x.','c14y.','c14z.','c191.','c192.','c193.','c194.','c195.','c196.',
+												'c197.','c198.','c199.','c19A.','c19B.','c19z.','c1A1.','c1C1.','c1C2.','c1C3.','c1C4.','c1C5.',
+												'c1C6.','c1C7.','c1C8.','c1Cy.','c1Cz.','c1D1.','c1D2.','c1D3.','c1D4.','c1D5.','c1D6.','c1D7.',
+												'c1D8.','c1D9.','c1Du.','c1Dv.','c1Dw.','c1Dx.','c1Dy.','c1Dz.','c1E1.','c1E2.','c1E3.','c1E4.',
+												'c1E5.','c1E6.','c1E7.','c1E8.','c1E9.','c1EA.','c1EB.','c1EC.','c1ED.','c1EE.','c1c1.','c1c2.',
+												'c1c3.','c1cx.','c1cy.','c1cz.','c311.','c312.','c313.','c314.','c315.','c316.','c317.','c318.',
+												'c319.','c31A.','c31B.','c31C.','c31D.','c31E.','c31F.','c31G.','c31t.','c31u.','c31v.','c31w.',
+												'c31x.','c31y.','c31z.','c331.','c332.','c333.','c33x.','c33y.','c33z.','c431.','c432.','c433.',
+												'c434.','c435.','c436.','c437.','c438.','c439.','c43A.','c43B.','c43a.','c43b.','c43c.','c43d.',
+												'c43e.','c43f.','c43h.','c43i.','c43j.','c43k.','c43m.','c43n.','c43o.','c43p.','c43q.','c43r.',
+												'c43s.','c43t.','c43u.','c43v.','c43w.','c43x.','c43y.','c43z.','c611.','c612.','c613.','c614.',
+												'c615.','c616.','c617.','c61A.','c61B.','c61D.','c61E.','c61F.','c61G.','c61H.','c61J.','c61K.',
+												'c61L.','c61M.','c61N.','c61O.','c61P.','c61Q.','c61R.','c61W.','c61Y.','c61b.','c61g.','c61h.',
+												'c61i.','c61j.','c61k.','c61l.','c61m.','c61n.','c61p.','c61q.','c61r.','c61s.','c61t.','c61u.',
+												'c61v.','c61w.','c61x.','c61z.','c621.','c622.','c623.','c624.','c641.','c642.','c643.','c644.',
+												'c645.','c647.','c648.','c649.','c64A.','c64B.','c64C.','c64D.','c64E.','c64F.','c64G.','c64H.',
+												'c64I.','c64J.','c64K.','c64L.','c64M.','c64N.','c64a.','c64b.','c64c.','c64d.','c64e.','c64g.',
+												'c64h.','c64i.','c64j.','c64k.','c64l.','c64m.','c64n.','c64o.','c64p.','c64u.','c64v.','c64w.',
+												'c64x.','c64y.','c64z.','c651.','c652.','c653.','c654.','c655.','c656.','c657.','c658.','c659.',
+												'c65A.','c65B.','c65C.','c65D.','c65E.','c65F.','c65G.','c65H.','c65I.','c65J.','c65K.','c65L.',
+												'c65M.','c65N.','c65O.','c65P.','c65Q.','c65R.','c65S.','c65T.','c65U.','c65V.','c65W.','c65X.',
+												'c65Y.','c65Z.','c65a.','c65b.','c65c.','c65d.','c65e.','c65f.','c65g.','c661.','c662.','c663.',
+												'c664.','c665.','c666.','c667.','c668.','c669.','c66A.','c66B.','c66C.','c66D.','c66E.','c66F.',
+												'c66G.','c66H.','c66I.','c66J.','c66K.','c66L.','c66M.','c66N.','c66V.','c66W.','c66X.','c66Y.',
+												'c66Z.','c66a.','c66b.','c66c.','c66d.','c66e.','c66f.','c66g.','c66h.','c671.','c672.','c673.',
+												'c674.','c675.','c67x.','c67y.','c67z.','c681.','c682.','c683.','c684.','c691.','c692.','c69y.',
+												'c69z.','c6A1.','c6A2.','c6A3.','c6A4.','c6Az.','c6B1.','c6B2.','c6B3.','c6B4.','c711.','c712.',
+												'c713.','c714.','c715.','c716.','c717.','c718.','c719.','c71a.','c71b.','c71c.','c71d.','c71e.',
+												'c71g.','c71h.','c71i.','c71j.','c71k.','c721.','c722.','c723.','c72y.','c72z.','c741.','c742.',
+												'c743.','c744.','c745.','c746.','c747.','cA11.','cA12.','cA13.','cA14.','cA15.','cA16.','cA1y.',
+												'cA1z.','cA21.','cA22.'
+												))
+				SELECT coh.ALF_PE,
+						max(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;					
+
+/* Update cohort3 table with the prior asthma medication date */
+
+
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN LAST_ASTHMA_MED_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_ASTHMA_MED AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.LAST_ASTHMA_MED_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET ASTHMA = CASE WHEN FIRST_ASTHMA_DT IS NOT NULL
+					AND LAST_ASTHMA_MED_DT IS NOT NULL
+					AND MONTHS_BETWEEN(PABX_STR, LAST_ASTHMA_MED_DT) < 12
+					THEN 1
+				ELSE 0
+			END;
+			
+SELECT * FROM SAILW1169V.VB_COHORT3;
+
+--------------------------------------------------------------------------------------------------------------
+		
+/* update cohort table with COPD
+Link all cohort3 pAbx events to gp event to identify any events with COPD read codes
+Identify first event date for any episode with a recorded COPD read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_COPD AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_COPD
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('14B3.','14OX.','661M3','661N3','663K.','66YB.','66YB0','66YB1','66YB2','66YD.','66Yd.','66Ye.',
+												'66Yf.','66Yg.','66Yh.','66YI.','66Yi.','66YL.','66YM.','66YS.','66YT.','66Yz1','66Yz2','679V.',
+												'8BMa0','8BMW.','8CE6.','8CeD.','8CMV.','8CMW5','8CR1.','8H2R.','8Hkw.','8IEy.','8IEZ.','9e03.',
+												'9kf..','9kf0.','9kf1.','9kf2.','9NgP.','9Nk70','9Oi..','9Oi0.','9Oi1.','9Oi2.','9Oi3.','9Oi4.',
+												'H3...','H31..','H310.','H3100','H310z','H311.','H3110','H3111','H311z','H312.','H3120','H3121',
+												'H3122','H312z','H313.','H31y.','H31yz','H31z.','H32..','H320.','H3200','H3201','H3202','H3203',
+												'H320z','H321.','H322.','H32y.','H32yz','H32z.','H36..','H37..','H38..','H39..','H3A..','H3B..',
+												'H3y..','H3y0.','H3y1.','H3z..','H4640','H581.','Hyu30','Hyu31'
+												))
+				SELECT coh.ALF_PE,
+						min(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;						
+
+/* Update cohort3 table with the prior COPD date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN COPD INTEGER
+	ADD COLUMN FIRST_COPD_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_COPD AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.FIRST_COPD_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET COPD = CASE WHEN FIRST_COPD_DT IS NOT NULL	
+					THEN 1
+				ELSE 0
+			END;
+			
+------------------------------------------------------------------------------------------------------------------------------------------------
+		--IMMUNOSUPRESSION
+-------------------------------------------------------------------------------------------------------------------------------------------------
+			
+/* update cohort table with biological immunosupressants
+Link all cohort3 pAbx events to gp event to identify any events with biological immunosupressants read codes
+Identify first event date for any episode with a recorded biological immunosupressants read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_BIO_IMM AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_BIO_IMM
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('2J31.','7Q08.','7Q08z','8BPE.','8C32.','SL31.','U6034','h86..','h861.','h862.','h87..','h871.',
+											'h872.','h873.','h874.','h88..','h881.','h882.','h89..','h891.','h892.','h893.','h894.','h895.',
+											'h896.','h89t.','h89u.','h89v.','h89w.','h89x.','h89y.','h89z.','h8B..','h8B1.','h8B2.','h8B3.',
+											'h8Bz.','h8C..','h8C1.','h8C2.','h8C3.','h8C4.','h8Cy.','h8Cz.','h8E..','h8E1.','h8E2.','h8E3.',
+											'h8E4.','h8F..','h8F1.','h8F2.','h8F3.','h8F4.','h8Fw.','h8Fx.','h8Fy.','h8Fz.','h8G..','h8G1.',
+											'h8G2.','h8H..','h8H1.','h8H2.','h8I..','h8I1.','h8I2.','h8I3.','h8I4.','h8I5.','h8I6.','h8K..',
+											'h8K1.','h8K2.','h8K3.','h8K4.','h8P..','h8P1.','h8P2.','h8R..','h8R1.','h8R2.','h8R3.','h8R4.',
+											'hh1..','hh11.','hh12.','hh13.','hh14.'
+												))
+				SELECT coh.ALF_PE,
+						max(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;					
+
+/* Update cohort3 table with the prior biological immunosuppressants date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN BIO_IMM INTEGER
+	ADD COLUMN LAST_BIO_IMM_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_BIO_IMM AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.LAST_BIO_IMM_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET BIO_IMM = CASE WHEN LAST_BIO_IMM_DT IS NOT NULL
+					AND MONTHS_BETWEEN(PABX_STR, LAST_BIO_IMM_DT) < 12
+					THEN 1
+				ELSE 0
+			END;
+			
+-------------------------------------------------------------------------------------------------------------------------------------------------
+			
+/* update cohort table with haematological cancer
+Link all cohort3 pAbx events to gp event to identify any events with haematological cancer read codes
+Identify first event date for any episode with a recorded haematological cancer read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_HAEM_CANC AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_HAEM_CANC
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('4C53.','4M2..','4M20.','4M21.','4M22.','4M23.','B6...','B60..','B600.','B6000','B6001','B6003',
+												'B6007','B600z','B601.','B6010','B6011','B6012','B6013','B6015','B6017','B6018','B601z','B602.',
+												'B6021','B6022','B6023','B6025','B602z','B60y.','B60z.','B61..','B610.','B6101','B6103','B611.',
+												'B6111','B612.','B6124','B613.','B6130','B6131','B6132','B6133','B6135','B6136','B6137','B6138',
+												'B613z','B614.','B6140','B6141','B6142','B6143','B6144','B6147','B6148','B614z','B615.','B6150',
+												'B6151','B6152','B6155','B615z','B616.','B6160','B6161','B6164','B6165','B6167','B6168','B616z',
+												'B617.','B618.','B619.','B61B.','B61C.','B61z.','B61z0','B61z1','B61z2','B61z3','B61z4','B61z5',
+												'B61z7','B61z8','B61zz','B62..','B620.','B6200','B6201','B6202','B6203','B6204','B6205','B6208',
+												'B620z','B621.','B6210','B6213','B6214','B6215','B6218','B621z','B622.','B622z','B623.','B6230',
+												'B6231','B6233','B6234','B6238','B623z','B624.','B6240','B6243','B624z','B625.','B6250','B6252',
+												'B6258','B625z','B626.','B6260','B6265','B6268','B626z','B627.','B6270','B6271','B6272','B6273',
+												'B6274','B6275','B6276','B6277','B6278','B6279','B627A','B627B','B627C','B627D','B627E','B627F',
+												'B627G','B627W','B627X','B628.','B6280','B6281','B6282','B6283','B6284','B6285','B6286','B6287',
+												'B629.','B62A.','B62B.','B62C.','B62D.','B62E.','B62E1','B62E2','B62E3','B62E4','B62E5','B62E6',
+												'B62E7','B62E8','B62E9','B62EA','B62Ew','B62F.','B62F0','B62F1','B62F2','B62Fy','B62x.','B62x0',
+												'B62x1','B62x2','B62x4','B62x5','B62x6','B62xX','B62y.','B62y0','B62y1','B62y2','B62y3','B62y4',
+												'B62y5','B62y6','B62y7','B62y8','B62yz','B62z.','B62z0','B62z1','B62z2','B62z3','B62z4','B62z5',
+												'B62z6','B62z8','B62zz','B63..','B630.','B6300','B6301','B6302','B6303','B6304','B631.','B63y.',
+												'B63z.','B64..','B640.','B6400','B641.','B6410','B6411','B6412','B6413','B642.','B64y.','B64y1',
+												'B64y2','B64y3','B64y4','B64y5','B64yz','B64z.','B65..','B650.','B651.','B6510','B6511','B6512',
+												'B6513','B651z','B652.','B653.','B6530','B6531','B654.','B65y.','B65y1','B65yz','B65z.','B66..',
+												'B660.','B661.','B662.','B663.','B66y.','B66yz','B66z.','B67..','B670.','B672.','B673.','B674.',
+												'B675.','B676.','B677.','B67y.','B67y0','B67yz','B67z.','B68..','B680.','B681.','B682.','B68y.',
+												'B68z.','B69..','B690.','B691.','B692.','B693.','B6y..','B6y0.','B6y1.','B6z..','B936.','B9373',
+												'B9379','B937W','BBB1.','BBg..','BBg0.','BBg1.','BBg10','BBg2.','BBg3.','BBg4.','BBg5.','BBg6.',
+												'BBg7.','BBg8.','BBgA.','BBgB.','BBgC.','BBgD.','BBgE.','BBgG.','BBgH.','BBgJ.','BBgK.','BBgL.',
+												'BBgM.','BBgN.','BBgP.','BBgQ.','BBgR.','BBgS.','BBgT.','BBgV.','BBgz.','BBh..','BBh0.','BBh1.',
+												'BBh2.','BBj..','BBj0.','BBj1.','BBj10','BBj11','BBj2.','BBj3.','BBj4.','BBj6.','BBj60','BBj61',
+												'BBj62','BBj7.','BBj9.','BBjz.','BBk..','BBk0.','BBk2.','BBk3.','BBk5.','BBk7.','BBk8.','BBkz.',
+												'BBl..','BBl0.','BBl1.','BBlz.','BBm0.','BBm1.','BBm2.','BBm3.','BBm4.','BBm5.','BBm6.','BBm8.',
+												'BBm9.','BBmC.','BBmD.','BBmE.','BBmF.','BBmH.','BBmJ.','BBmK.','BBn..','BBn0.','BBn2.','BBn3.',
+												'BBnz.','BBp1.','BBp2.','BBr..','BBr0.','BBr00','BBr01','BBr02','BBr03','BBr04','BBr0z','BBr2.',
+												'BBr20','BBr21','BBr23','BBr25','BBr26','BBr27','BBr3.','BBr3z','BBr4.','BBr40','BBr4z','BBr6.',
+												'BBr60','BBr61','BBr62','BBr63','BBr66','BBr67','BBr68','BBr69','BBr6z','BBr70','BBr8.','BBr80',
+												'BBr8z','BBr90','BBrA.','BBrA1','BBrA3','BBrA4','BBrA5','BBrA6','BBrA7','BBrAz','BBrz.','BBs..',
+												'BBs1.','BBs5.','BBTA.','BBv..','BBv0.','BBv2.','ByuD.','ByuD0','ByuD1','ByuD2','ByuD3','ByuD4',
+												'ByuD5','ByuD6','ByuD7','ByuD8','ByuD9','ByuDA','ByuDB','ByuDC','ByuDD','ByuDE','ByuDF','ByuHD',
+												'C3300','C333.','C3330','C3331','C3332','C3333','C333z','C37y0','C37y1','C37y5','C37y6','C37yB',
+												'D4011','D41y1','D41y3','M1628','N3309'
+												))
+				SELECT coh.ALF_PE,
+						max(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;					
+
+/* Update cohort3 table with the prior haematological cancer date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN HAEM_CANC INTEGER
+	ADD COLUMN LAST_HAEM_CANC_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_HAEM_CANC AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.LAST_HAEM_CANC_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET HAEM_CANC = CASE WHEN LAST_HAEM_CANC_DT IS NOT NULL
+					AND MONTHS_BETWEEN(PABX_STR, LAST_HAEM_CANC_DT) < 24
+					THEN 1
+				ELSE 0
+			END;
+		
+-------------------------------------------------------------------------------------------------------------------------------------------------
+			
+/* update cohort table with cancer treatment
+Link all cohort3 pAbx events to gp event to identify any events with cancer treatment read codes
+Identify first event date for any episode with a recorded cancer treatment read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_CANC_TREAT AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_CANC_TREAT
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('70462','70522','71011','72201','72444','72727','74544','78093','78094','5131.','5133.','5135.',
+												'5136.','5137.','514..','5141.','5142.','5143.','5144.','5145.','5146.','5147.','5148.','5149.',
+												'514Z.','515..','5151.','5152.','5153.','5154.','515Z.','56B5.','59...','59...','591..','5912.',
+												'5913.','5914.','5914.','5917.','591Z.','592..','5921.','5922.','592Z.','593..','5932.','5933.',
+												'593Z.','594..','5941.','5942.','595..','5953.','596..','5961.','5962.','5963.','596Z.','597..',
+												'5971.','5973.','5974.','5975.','597Z.','59Z..','5A...','5A...','5A1..','5A12.','5A13.','5A14.',
+												'5A15.','5A16.','5A17.','5A1Z.','5A2..','5A21.','5A22.','5A26.','5A27.','5A28.','5A2Z.','5A3..',
+												'5A33.','5A3Z.','5A4..','5A4..','5A42.','5A45.','5A46.','5A4Z.','5A51.','5A53.','5A57.','5A58.',
+												'5A59.','5A62.','5A64.','5A7..','5A73.','5A74.','5A77.','5A7Z.','5A8..','5A81.','5A8Z.','5A9..',
+												'5AA..','5AB..','5AC..','5AZ..','72722','782M6','7B0A8','7B3BC','7B3CA','7B3CB','7D034','7D154',
+												'7E0C0','7H2C0','7K1V7','7L102','7L161','7L168','7L182','7L186','7L193','7L19H','7L1b.','7L1d.',
+												'7L1d0','7L1d2','7L1d4','7L1dy','7L1dz','7L1e.','7L1ez','7L1h0','7L1h1','7L1h4','7L1hz','7L1i.',
+												'7L1i1','7L1iz','7L1X0','7L1Xy','7L1Y.','7L1Y0','7L1Yz','7L1Z.','7L1Z0','7L1Z0','7L1Z1','7L1Z2',
+												'7L1Z3','7L1Z5','7L1Zy','7L1Zz','7L2..','7M0c.','7M0c0','7M0c2','7M0c3','7M0c4','7M0c5','7M0cy',
+												'7M0l.','7M0ly','7M0P.','7M0P0','7M0p0','7M0P3','7M0P4','7M0P5','7M0Py','7M0Pz','7M0Q3','7M371',
+												'7Q0J.','7Q0J2','8BA5.','8BA5.','8BAa.','8BAD.','8BAD0','8BAI.','8BAJ.','8BAK.','8BAL.','8BAl.',
+												'8BAM.','8BAY.','8CRC.','8CV1.','8F83.','8H2G.','8H3L.','8H67.','8HB6.','8HB7.','8J...','8J00.',
+												'8J01.','9N0D.','9N1yC','D2013','D2013','D2013','D4003','D4003','SL07.','TA32.','TB121','U6031',
+												'U6031','U6032','U6033','U6033','U6033','U6033','U6033','U6033','U6033','U6132','Z1Q1.','Z9KG5',
+												'ZL131','ZL931','ZLD24','ZV580','ZV581','ZV588','ZV661','ZV662','ZV671','ZV672','ZV677','ZV678',
+												'ZV678','ZV678','ZV6B1','ZVu3L'
+												))
+				SELECT coh.ALF_PE,
+						max(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;					
+
+/* Update cohort3 table with the prior haematological cancer date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN CANC_TREAT INTEGER
+	ADD COLUMN LAST_CANC_TREAT_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_CANC_TREAT AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.LAST_CANC_TREAT_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET CANC_TREAT = CASE WHEN LAST_CANC_TREAT_DT IS NOT NULL
+					AND MONTHS_BETWEEN(PABX_STR, LAST_CANC_TREAT_DT) < 12
+					THEN 1
+				ELSE 0
+			END;
+			
+-------------------------------------------------------------------------------------------------------------------------------------------------
+			
+/* update cohort table with DMARDS
+Link all cohort3 pAbx events to gp event to identify any events with DMARDS read codes
+Identify first event date for any episode with a recorded DMARDS read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_DMARDS AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_DMARDS
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('h14..','h141.','h142.','h143.','h144.','h145.','h146.','h147.','h148.','h149.','h14A.','h14B.',
+												'h14C.','h14a.','h14b.','h14c.','h24B.','h33..','h331.','h332.','h33y.','h33z.','h34..','h341.',
+												'h342.','h343.','h344.','h345.','h346.','h347.','h348.','h349.','h34A.','h34B.','h34C.','h34D.',
+												'h34E.','h34F.','h34G.','h34H.','h34L.','h34M.','h34N.','h34O.','h34P.','h34Q.','h34R.','h34S.',
+												'h34T.','h34U.','h34V.','h34W.','h34X.','h34Y.','h34Z.','h34a.','h34b.','h34c.','h34d.','h34e.',
+												'h34f.','h34g.','h34h.','h34i.','h34j.','h34k.','h34l.','h34m.','h34n.','h34o.','h34p.','h34q.',
+												'h34r.','h34s.','h34t.','h34u.','h34v.','h34w.','h34x.','h34y.','h34z.','h3G..','h3G1.','h3G2.',
+												'h3G3.','h3G4.','h3G5.','h3G6.','h3G7.','h3G8.','h3G9.','h3GA.','h3GB.','h3GC.','h3GD.','h3GE.',
+												'h3GF.','h3GG.','h3GH.','h3GI.','h3GJ.','h3GK.','h3GL.','h3GM.','h3GN.','h3GO.','h3GP.','h3GQ.',
+												'h3GR.','h3GS.','h3GT.','h3GU.','h3GV.','h3GW.','h3GX.','h3GY.','h3GZ.','h71..','h711.','h712.',
+												'h713.','h714.','h715.','h716.','h717.','h718.','h719.','h71A.','h71x.','h71y.','h71z.','h82..',
+												'h821.','h822.','h823.','h824.','h825.','h826.','h827.','h828.','h829.','h82A.','h82B.','h82C.',
+												'h82D.','h82E.','h82F.','h82G.','h82H.','h82I.','h82J.','h82K.','h82L.','h82M.','h82N.','h82O.',
+												'h82P.','h82x.','h82y.','h82z.','h83..','h831.','h832.','h833.','h834.','h835.','h836.','h837.',
+												'h838.','h839.','h83A.','h83B.','h83C.','h83D.','h83E.','h83F.','h83G.','h83H.','h83I.','h83J.',
+												'h83K.','h83L.','h83M.','h83N.','h83O.','h83P.','h83Q.','h83R.','h83S.','h83T.','h83U.','h83o.',
+												'h83p.','h83q.','h83r.','h83s.','h83t.','h83u.','h83v.','h83w.','h83x.','h83y.','h83z.','h84..',
+												'h841.','h842.','h843.','h844.','h845.','h846.','h847.','h848.','h849.','h84a.','h84b.','h84x.',
+												'h84y.','h84z.','h8Q..','h8Q1.','h8Q2.','h8Q3.','h8Q4.','j51..','j511.','j512.','j513.','j514.',
+												'j515.','j51v.','j51w.','j51x.','j51y.','j51z.','j52..','j521.','j522.','j523.','j524.','j525.',
+												'j526.','j527.','j528.','j59..','j591.','j592.','j593.','j59w.','j59x.','j59y.','j59z.','aa66.',
+												'aa6t.','aa6u.','aa6v.','ej31.','j541.','j542.','j54z.','j552.','j55z.'
+												))
+				SELECT coh.ALF_PE,
+						max(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;					
+
+/* Update cohort3 table with the prior haematological cancer date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN DMARDS INTEGER
+	ADD COLUMN LAST_DMARDS_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_DMARDS AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.LAST_DMARDS_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET DMARDS = CASE WHEN LAST_DMARDS_DT IS NOT NULL
+					AND MONTHS_BETWEEN(PABX_STR, LAST_DMARDS_DT) < 12
+					THEN 1
+				ELSE 0
+			END;
+			
+-------------------------------------------------------------------------------------------------------------------------------------------------
+			
+/* update cohort table with Stem Cell Transplant
+Link all cohort3 pAbx events to gp event to identify any events with Stem Cell Transplant read codes
+Identify first event date for any episode with a recorded Stem Cell Transplant read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_STEMCELL AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_STEMCELL
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('7K1Q.','7K1Q0','7K1Q1','7K1Q2','7K1Q3','7K1Q4','7K1Q5','7K1Q6','7K1Qy',
+												'7K1Qz','7K6i.','7K6i0','7L144','7L145','7L146','7L147','7L155','7L173','85BB.','SP082'
+												))
+				SELECT coh.ALF_PE,
+						max(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;					
+
+/* Update cohort3 table with the prior haematological cancer date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN STEMCELL INTEGER
+	ADD COLUMN LAST_STEMCELL_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_STEMCELL AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.LAST_STEMCELL_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET STEMCELL = CASE WHEN LAST_STEMCELL_DT IS NOT NULL
+					AND MONTHS_BETWEEN(PABX_STR, LAST_STEMCELL_DT) < 24
+					THEN 1
+				ELSE 0
+			END;
+			
+--------------------------------------------------------------------------------------------------------------
+
+/* update cohort table with organ transplant
+Link all cohort3 pAbx events to gp event to identify any events with organ transplant read codes
+Identify first event date for any episode with a recorded organ transplant read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_ORG_TRANS AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_ORG_TRANS
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('74501','78000','78001','78002','78004','78005','78052','78301','78303','78312','78420','79000',
+												'79011','79013','79015','14S2.','14S3.','14S8.','14S9.','7125.','7450.','74500','7450y','7450z',
+												'761N.','764C.','7800.','7800y','7800z','7830.','78302','7830z','7900.','7900z','7901.','79010',
+												'7901y','7901z','7B00.','7B000','7B001','7B002','7B003','7B004','7B005','7B006','7B00y','7B00z',
+												'7B015','7B063','7B0F.','7B0F1','7B0F2','7B0F3','7B0F4','7B0Fy','7B0Fz','8C31.','8HBB.','9b8B2',
+												'9b8K.','K0B5.','Kyu1C','SP08.','SP080','SP081','SP083','SP084','SP085','SP086','SP087','SP088',
+												'SP089','SP08A','SP08B','SP08D','SP08E','SP08F','SP08G','SP08H','SP08J','SP08N','SP08P','SP08R',
+												'SP08T','SP08V','SP08W','SP08z','TB000','TB001','TB002','ZLD4K','ZLEQJ','ZV42.','ZV420','ZV421',
+												'ZV426','ZV427','ZV42y','ZV596'
+												))
+				SELECT coh.ALF_PE,
+						min(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;					
+
+/* Update cohort3 table with the prior organ transplant date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN ORG_TRANS INTEGER
+	ADD COLUMN FIRST_ORG_TRANS_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_ORG_TRANS AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.FIRST_ORG_TRANS_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET ORG_TRANS = CASE WHEN FIRST_ORG_TRANS_DT IS NOT NULL	
+					THEN 1
+				ELSE 0
+			END;
+			
+--------------------------------------------------------------------------------------------------------------
+
+/* update cohort table with Primary immunodeficiency
+Link all cohort3 pAbx events to gp event to identify any events with Primary immunodeficiency read codes
+Identify first event date for any episode with a recorded Primary immunodeficiency read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_PIM AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_PIM
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('2J30.','66c3.','B05z0','B31z0','B33z0','B592X','B59zX','B6z0.','Byu53','Byu5B','C3006','C3007',
+												'C300A','C30yy','C390.','C3900','C3901','C3902','C3903','C3904','C3905','C3906','C3907','C3908',
+												'C3909','C390A','C390B','C390y','C390z','C391.','C3910','C3911','C3912','C392.','C3921','C3923',
+												'C3924','C3925','C3926','C3927','C3928','C3929','C392z','C393.','C395.','C396.','C397.','C398.',
+												'C3980','C3982','C39X.','C39y0','C39y1','Cyu00','Cyu04','Cyu05','D2...','D20..','D200.','D2000',
+												'D2001','D2002','D200y','D201.','D2010','D2011','D2012','D2014','D2015','D2016','D201z','D204.',
+												'D20z.','D401.','F14y0','H24y2'
+												))
+				SELECT coh.ALF_PE,
+						min(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;					
+
+/* Update cohort3 table with the prior Primary immunodeficiency date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN PIM INTEGER
+	ADD COLUMN FIRST_PIM_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_PIM AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.FIRST_PIM_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET PIM = CASE WHEN FIRST_PIM_DT IS NOT NULL	
+					THEN 1
+				ELSE 0
+			END;
+		
+--------------------------------------------------------------------------------------------------------------------------------------
+			
+/* update cohort table with steroids */
+		
+/*IMPART long term steroid use prior to rUTI
+ * is based upon subsequent prescriptions of any steroid, not the exact read code
+ * Must be 3 prescriptions within a 90 day period, the last being within 3 months of the pAbx start date
+*/
+
+--create basis of repeat steroids where read code in list and dates in study period
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.VB_STEROIDS');
+		
+CREATE TABLE SAILW1169V.VB_STEROIDS AS
+	(SELECT * FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301) WITH NO DATA;
+
+alter table SAILW1169V.VB_STEROIDS activate not logged INITIALLY;
+
+INSERT INTO SAILW1169V.VB_STEROIDS
+	SELECT gp.* FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301 AS gp
+		WHERE EVENT_CD IN ('aa91.','aa92.','aa93.','aa94.','aa95.','aa96.','aa97.','aa9z.','ai11.','ai14.','ai26.','ai27.',
+							'ai28.','ai29.','ai2a.','ai2b.','ai31.','ai32.','ai33.','ai34.','fe11.','fe12.','fe1x.','fe1y.',
+							'fe21.','fe22.','fe23.','fe24.','fe25.','fe26.','fe31.','fe32.','fe33.','fe3A.','fe3B.','fe3C.',
+							'fe3r.','fe3s.','fe3u.','fe41.','fe42.','fe43.','fe44.','fe45.','fe4e.','fe4f.','fe4g.','fe4h.',
+							'fe51.','fe52.','fe53.','fe5f.','fe5m.','fe5n.','fe5o.','fe5p.','fe61.','fe62.','fe65.','fe66.',
+							'fe69.','fe6a.','fe6c.','fe6d.','fe6e.','fe6f.','fe6g.','fe6h.','fe6i.','fe6j.','fe6k.','fe6l.',
+							'fe6m.','fe6n.','fe6o.','fe6p.','fe6q.','fe6r.','fe6s.','fe6t.','fe6v.','fe6w.','fe6z.','fe71.',
+							'fe72.','fe73.','fe77.','fe78.','fe79.','fe7x.','fe7y.','fe7z.','fe81.','fe82.','fe86.','fe87.',
+							'fe91.','fe92.','fe93.','fe94.','fe95.','fe96.'
+							)
+		AND gp.EVENT_DT BETWEEN '2009-01-01' AND '2020-12-31';
+	
+COMMIT;
+		
+--Delete rows where ALF_PE, EVENT_CD and EVENT_DT match
+
+DELETE FROM 
+	(SELECT ROWNUMBER()	OVER(PARTITION BY ALF_PE, EVENT_DT ORDER BY EVENT_DT) AS rn
+			FROM SAILW1169V.VB_STEROIDS) AS mqo
+			WHERE rn > 1;
+
+--Add field to identify the previous date that a steroid was prescribed
+					
+ALTER TABLE SAILW1169V.VB_STEROIDS
+ADD COLUMN PREV_EVENT_DT DATE;
+
+alter table SAILW1169V.VB_STEROIDS activate not logged INITIALLY;
+
+UPDATE SAILW1169V.VB_STEROIDS
+SET PREV_EVENT_DT= LAG(EVENT_DT) OVER(PARTITION BY ALF_PE ORDER BY EVENT_DT);
+
+COMMIT;
+
+--Add field to count days between current and previous steroid prescription
+
+ALTER TABLE SAILW1169V.VB_STEROIDS
+ADD COLUMN DAYS_FROM_LAST_EVENT INTEGER;
+
+alter table SAILW1169V.VB_STEROIDS activate not logged INITIALLY;
+
+UPDATE SAILW1169V.VB_STEROIDS
+	SET DAYS_FROM_LAST_EVENT = TIMESTAMPDIFF(16,TIMESTAMP(EVENT_DT)-TIMESTAMP(PREV_EVENT_DT));
+
+COMMIT;
+
+--Add field to identify the last but one date that a steroid was prescribed
+
+ALTER TABLE SAILW1169V.VB_STEROIDS
+ADD COLUMN PREV_EVENT2_DT DATE;
+
+alter table SAILW1169V.VB_STEROIDS activate not logged INITIALLY;
+
+UPDATE SAILW1169V.VB_STEROIDS
+SET PREV_EVENT2_DT= LAG(EVENT_DT,2) OVER(PARTITION BY ALF_PE ORDER BY EVENT_DT);
+
+COMMIT;
+
+--Add field to count days between current and last but 1 prescripton of steroid
+
+ALTER TABLE SAILW1169V.VB_STEROIDS
+ADD COLUMN DAYS_FROM_LAST2_EVENT INTEGER;
+
+alter table SAILW1169V.VB_STEROIDS activate not logged INITIALLY;
+
+UPDATE SAILW1169V.VB_STEROIDS
+	SET DAYS_FROM_LAST2_EVENT = TIMESTAMPDIFF(16,TIMESTAMP(EVENT_DT)-TIMESTAMP(PREV_EVENT2_DT));
+
+COMMIT;
+
+/* SELECT rows where there have been three prescriptions within the last 90 days and the most recent was within 3 months of pAbx start date
+ * To obtain different days between prescriptions update the DAYS_FROM_LAST2_EVENT criteria
+ */		
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_STEROID AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_STEROID
+							(ALF_PE,
+							EVENT_DT)
+				SELECT coh.ALF_PE,
+						max(ste.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN SAILW1169V.VB_STEROIDS AS ste
+							ON coh.ALF_PE = ste.ALF_PE
+						WHERE ste.EVENT_DT < coh.PABX_STR
+						AND ste.DAYS_FROM_LAST2_EVENT BETWEEN 1 AND 90
+					GROUP BY coh.ALF_PE;
+				
+Commit;
+
+/* Update cohort3 table with the prior steroids date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN STEROIDS INTEGER
+	ADD COLUMN LAST_STEROIDS_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_STEROID AS ste
+		ON coh.ALF_PE = ste.ALF_PE
+		AND MONTHS_BETWEEN(coh.PABX_STR, ste.EVENT_DT) < 3
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.LAST_STEROIDS_DT = ste.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET STEROIDS = CASE WHEN LAST_STEROIDS_DT IS NOT NULL	
+					THEN 1
+				ELSE 0
+			END;
+			
+DROP TABLE SAILW1169V.VB_STEROIDS;		
+----------------------------------------------------------------------------------------------------------------------
+--Combined immunosuppression flag
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+ADD COLUMN IMMUN_SUPP INTEGER;
+
+UPDATE SAILW1169V.VB_COHORT3
+SET IMMUN_SUPP = CASE WHEN HAEM_CANC = 1
+					OR STEROIDS = 1
+					OR DMARDS = 1
+					OR CANC_TREAT = 1
+					OR BIO_IMM = 1
+					OR ORG_TRANS = 1
+					OR PIM = 1
+					OR STEMCELL = 1
+				THEN 1
+			ELSE 0
+		END;
+		
+--------------------------------------------------------------------------------------------------------------
+
+/* update cohort table with renal stone
+Link all cohort3 pAbx events to gp event to identify any events with renal stone read codes
+Identify first event date for any episode with a recorded renal stone read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_RENAL_STONE_WLGP AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_RENAL_STONE_WLGP
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('4G4..','4G41.','4G42.','4G43.','4G44.','4G4Z.','C3411','K112.','K12..','K120.','K1200','K120z',
+												'K121.','K122.','K12z.','K14..','K140.','K1400','K1401','K140z','K141.','K14y.','K14z.','PD31.'
+												))
+				SELECT coh.ALF_PE,
+						max(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;					
+
+/* Update cohort3 table with the prior renal stone date */
+
+	
+	ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN RENAL_STONE INTEGER
+	ADD COLUMN LAST_RENAL_STONE_DT_WLGP DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_RENAL_STONE_WLGP AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.LAST_RENAL_STONE_DT_WLGP = gpev.EVENT_DT
+			;
+		
+/* 
+Link all cohort3 rUTI events to PEDW Diag to identify any episodes with renal stone ICD-10 codes
+Identify latest event prior to rUTI diagnosis date for any episode with a recorded renal stone ICD-10 code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_RENAL_STONE_ICD AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_RENAL_STONE_ICD
+							(ALF_PE,
+							EVENT_DT)
+				WITH rs AS
+	(SELECT PROV_UNIT_CD,
+			SPELL_NUM_PE,
+			EPI_NUM,
+			DIAG_CD_1234
+			FROM SAIL1169V.PEDW_DIAG_20210704
+			WHERE DIAG_CD_1234 IN ('N20.0','N20.1','N20.2','N20.9','N21.0','N21.1','N21.8','N21.9','N22.8','N13.2'		
+								)),
+								CTE AS 
+							(SELECT sp.ALF_PE, sp.ALF_STS_CD, eps.EPI_STR_DT, rs.DIAG_CD_1234 FROM rs
+							LEFT JOIN SAIL1169V.PEDW_EPISODE_20210704 AS eps
+								ON rs.PROV_UNIT_CD = eps.PROV_UNIT_CD
+								AND rs.SPELL_NUM_PE = eps.SPELL_NUM_PE
+								AND rs.EPI_NUM = eps.EPI_NUM
+							LEFT JOIN SAIL1169V.PEDW_SPELL_20210704 AS sp
+								ON rs.PROV_UNIT_CD = sp.PROV_UNIT_CD
+								AND rs.SPELL_NUM_PE = sp.SPELL_NUM_PE
+					WHERE sp.ALF_PE IS NOT NULL
+					AND sp.ALF_STS_CD IN ('1','4','39')
+					)
+				SELECT coh.ALF_PE,
+						max(CTE.EPI_STR_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EPI_STR_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;
+
+/* Update cohort3 table with the prior renal stone ICD-10 date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN RENAL_STONE_ICD INTEGER
+	ADD COLUMN LAST_RENAL_STONE_ICD_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_RENAL_STONE_ICD AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.LAST_RENAL_STONE_ICD_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET RENAL_STONE = CASE WHEN LAST_RENAL_STONE_ICD_DT IS NOT NULL
+				AND MONTHS_BETWEEN(PABX_STR, LAST_RENAL_STONE_ICD_DT) < 12
+					THEN 1
+					WHEN LAST_RENAL_STONE_DT_WLGP IS NOT NULL
+				AND MONTHS_BETWEEN(PABX_STR, LAST_RENAL_STONE_DT_WLGP) < 12
+					THEN 1
+				ELSE 0
+			END;
+
+--------------------------------------------------------------------------------------------------------------
+		
+/* update cohort table with structural abnormality of the renal system
+Link all cohort3 pAbx events to gp event to identify any events with structural abnormality of the renal system read codes
+Identify first event date for any episode with a recorded structural abnormality of the renal system read code */
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_COHORT_EVENT_ABN_RENAL AS (
+	SELECT	ALF_PE, 
+			EVENT_DT
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_COHORT_EVENT_ABN_RENAL
+							(ALF_PE,
+							EVENT_DT)
+				WITH CTE AS 
+						(SELECT ALF_PE,
+							EVENT_CD,
+							EVENT_DT
+						FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301
+							WHERE EVENT_CD IN ('K132z','K1340','PD61z','14h4.','7b013','7b020','7b021','7b104','7b12.','7b120','7b121','7b125',
+												'7b126','7b128','7b12y','7b12z','7b160','7b174','7b185','7b1a3','7b1d3','7b1d4','7b1d6','7b234',
+												'7b411','7B412','7b435','7b43a','7b456','k09..','K09..','k090.','K090.','K0900','k0901','K0902',
+												'k091.','k09z.','k11..','k111.','k113.','k11x.','k11z.','K1310','K132.','K1320','K1321','K1322',
+												'K1324','k133.','K1330','k1331','K133z','K134.','K134z','K135.','K137.','K139.','K13A.','k13b.',
+												'K13B.','K13y0','K13y1','K13y2','K13y3','K13y4','K13y5','K13y6','K13y7','k1400','k163.','k1911',
+												'K19C.','kyu11','kyu1f','pc61.','pd...','PD...','pd0..','PD0..','pd00.','PD00.','pd000','PD000',
+												'pd001','PD001','PD002','pd00z','PD00z','pd01.','PD01.','pd02.','PD02.','pd020','PD020','pd021',
+												'PD021','pd02z','PD02z','pd03.','PD03.','pd030','PD030','pd031','PD031','PD032','pd04.','pd040',
+												'PD040','pd041','PD041','pd042','PD042','pd04z','pd0z.','PD0z.','pd1..','pd10.','pd13.','pd1y.',
+												'pd1yz','pd1z.','PD1z.','pd2..','PD2..','pd20.','PD20.','pd21.','PD21.','pd22.','PD22.','pd220',
+												'PD220','pd221','PD221','pd222','PD222','pd22z','PD22z','pd23.','PD23.','pd24.','PD24.','pd25.',
+												'PD25.','pd26.','PD26.','pd27.','PD27.','PD28.','pd2y.','PD2y.','pd2z.','PD2z.','pd3..','pd30.',
+												'PD30.','pd31.','pd32.','PD32.','pd33.','PD33.','pd34.','PD34.','pd35.','PD35.','PD350','pd36.',
+												'PD36.','pd37.','PD37.','pd38.','PD38.','pd39.','pd3a.','PD3A.','pd3b.','PD3B.','pd3c.','PD3C.',
+												'pd3d.','PD3D.','PD3E.','pd3e.','pd3f.','PD3F.','pd3z.','PD3z.','pd4..','PD4..','pd40.','PD40.',
+												'pd41.','PD41.','pd42.','PD42.','pd43.','PD43.','pd44.','PD44.','pd45.','PD45.','pd46.','PD46.',
+												'pd47.','PD47.','pd4z.','PD4z.','pd5..','PD5..','pd50.','PD50.','pd5z.','PD5z.','pd6..','PD6..',
+												'pd60.','PD60.','pd600','PD600','pd601','PD601','pd60z','PD60z','pd61.','PD61.','pd610','PD610',
+												'pd611','PD611','pd61z','pd62.','PD62.','pd63.','PD63.','PD630','pd631','PD631','pd63z','PD63z',
+												'pd64.','PD64.','pd65.','PD65.','pd66.','PD66.','pd67.','PD67.','pd6y.','PD6y.','pd6z.','PD6z.',
+												'pd7..','PD7..','pd70.','PD70.','pd71.','PD71.','pd72.','PD72.','PD73.','pd7y.','PD7y.','pd7z.',
+												'PD7z.','PD8..','PD80.','pdy..','PDy..','pdy0.','PDy0.','PDy1.','pdy2.','PDy2.','pdy3.','PDy3.',
+												'pdy4.','PDy4.','pdy5.','PDy5.','pdy6.','PDy6.','pdy7.','PDy7.','pdy8.','PDy8.','pdy9.','PDy9.',
+												'pdya.','PDyA.','PDyB.','pdyz.','PDyz.','pdyz0','PDyz0','PDyz1','pdz..','PDz..','pdz0.','PDz0.',
+												'pdz1.','PDz1.','pdz2.','PDz2.','pdz3.','PDz3.','PE02.','PG72.','pky5e','PKyA.','pyu7.','pyu70',
+												'pyu71','Pyu72','pyu73','pyu75'
+												))
+				SELECT coh.ALF_PE,
+						min(CTE.EVENT_DT)
+					FROM SAILW1169V.VB_COHORT3 AS coh
+						LEFT JOIN CTE
+							ON coh.ALF_PE = CTE.ALF_PE
+						WHERE CTE.EVENT_DT < coh.PABX_STR
+					GROUP BY coh.ALF_PE;
+				
+Commit;					
+
+/* Update cohort3 table with the prior renal abnormality date */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN RENALTRACT_ABNORM INTEGER
+	ADD COLUMN FIRST_ABN_RENAL_DT DATE;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_COHORT_EVENT_ABN_RENAL AS gpev
+		ON coh.ALF_PE = gpev.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.FIRST_ABN_RENAL_DT = gpev.EVENT_DT
+			;
+
+UPDATE SAILW1169V.VB_COHORT3
+	SET RENALTRACT_ABNORM = CASE WHEN FIRST_ABN_RENAL_DT IS NOT NULL
+					THEN 1
+				ELSE 0
+			END;
+		
+--------------------------------------------------------------------------------------------------------------
+		
+/* update cohort table with WIMD
+Link all cohort3 pAbx events to WIMD at time of event */
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+	ADD COLUMN WIMD INTEGER
+	ADD COLUMN WIMD_2019_QUINTILE_DESC VARCHAR(50);
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING (SELECT DISTINCT ALF_PE, START_DATE, END_DATE, WIMD_2019_QUINTILE FROM SAIL1169V.WDSD_CLEAN_ADD_GEOG_CHAR_LSOA2011_20210704) AS lsoa
+		ON coh.ALF_PE = lsoa.ALF_PE
+		AND coh.PABX_STR BETWEEN lsoa.start_date AND lsoa.end_date
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.WIMD = lsoa.WIMD_2019_QUINTILE
+			;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING (SELECT DISTINCT ALF_PE, START_DATE, END_DATE, WIMD_2019_QUINTILE_DESC FROM SAIL1169V.WDSD_CLEAN_ADD_GEOG_CHAR_LSOA2011_20210704) AS lsoa
+		ON coh.ALF_PE = lsoa.ALF_PE
+		AND coh.PABX_STR BETWEEN lsoa.start_date AND lsoa.end_date
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.WIMD_2019_QUINTILE_DESC = lsoa.WIMD_2019_QUINTILE_DESC
+			;	
+		
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+
+--Look back over 18 months of health data to check whether there was an rUTI diagnosis WITHIN that period prior to pAbx start date
+		
+--------------------------------------------------------------------------------------
+--identify people with an rUTI from wlgp read codes during the 18 months prior to pAbx
+--initial acute UTI check covers study start date minus 18 months for rUTI period
+--UTI defined as WLGP uti read code and WLGP antibiotic prescription read code on the same day
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_GP_UTI_COH3 AS (
+	SELECT	ALF_PE,
+			ALF_STS_CD,
+			GNDR_CD,
+			WOB,
+			EVENT_CD,
+			EVENT_DT AS EVENT_STR_DT,
+			EVENT_DT AS EVENT_END_DT,
+			EVENT_YR
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_GP_UTI_COH3 (
+			ALF_PE,
+			ALF_STS_CD,
+			GNDR_CD,
+			WOB,
+			EVENT_CD,
+			EVENT_STR_DT,
+			EVENT_END_DT,
+			EVENT_YR)
+	SELECT DISTINCT coh.ALF_PE,
+			gp.ALF_STS_CD,
+			gp.GNDR_CD,
+			coh.WOB,
+			gp.EVENT_CD,
+			gp.EVENT_DT,
+			gp.EVENT_DT,
+			gp.EVENT_YR
+	FROM SAILW1169V.VB_GP_GOOD_ALF_REG_18 AS coh
+	INNER JOIN SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301 AS gp
+		ON coh.ALF_PE = gp.ALF_PE
+		AND gp.ALF_STS_CD IN ('1','4','39')
+		AND gp.EVENT_CD IN ('14D4.', '1A…','1A55.','1AG..','1J4..','K101.','K101z','K10y0','K10yz','K15..','K150.','K155.','K15y.',
+							'K15yz','K15z.','K190.','K1903','K1905','K1906','K190z','Kyu51','R081.','R081z','R0862','Ryu42','SP07Q')
+		AND gp.EVENT_DT BETWEEN '2008-07-01' AND '2020-12-31';
+
+Commit;
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_GP_ANTIBIOTIC_COH3 AS (
+	SELECT	ALF_PE,
+			ALF_STS_CD,
+			GNDR_CD,
+			WOB,
+			EVENT_CD,
+			EVENT_DT AS EVENT_STR_DT,
+			EVENT_DT AS EVENT_END_DT,
+			EVENT_YR
+		FROM SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+		
+INSERT INTO SESSION.VB_GP_ANTIBIOTIC_COH3 (
+			ALF_PE,
+			ALF_STS_CD,
+			GNDR_CD,
+			WOB,
+			EVENT_CD,
+			EVENT_STR_DT,
+			EVENT_END_DT,
+			EVENT_YR)
+	SELECT DISTINCT coh.ALF_PE,
+			gp.ALF_STS_CD,
+			gp.GNDR_CD,
+			coh.WOB,
+			gp.EVENT_CD,
+			gp.EVENT_DT,
+			gp.EVENT_DT,
+			gp.EVENT_YR
+	FROM SAILW1169V.VB_GP_GOOD_ALF_REG_18 AS coh
+	INNER JOIN SAIL1169V.WLGP_GP_EVENT_CLEANSED_20220301 AS gp
+		ON coh.ALF_PE = gp.ALF_PE
+		AND gp.ALF_STS_CD IN ('1','4','39')
+		AND gp.EVENT_CD IN ('e31h.','e31i.','e31j.','e31k.','e31P.','e31Q.',
+							'e31T.','e31t.','e31u.','e31U.','e31v.','e31w.','e31X.','e31Y.','e31z.','e3A7.','e3A8.','e3A9.','e3AA.',
+							'e3AB.','e521.','e522.','e52v.','e52w.','e691.','e692.','e693.','e694.','e695.','e696.','e697.','e698.',
+							'e699.','e69A.','e69a.','e69B.','e69b.','e69C.','e69c.','e69d.','e69D.','e69e.','e69E.','e69f.','e69F.',
+							'e69G.','e69g.','e69h.','e69H.','e69i.','e69j.','e69J.','e69K.','e69k.','e69l.','e69m.','e69n.','e69o.',
+							'e69p.','e69q.','e69v.','e69w.','ecc1.','ecc2.','ecc3.','ecc4.','ecc6.','ecc7.','ecc8.','ecc9.','ecca.',
+							'eccb.','eccd.','ecce.','ecci.','eccj.','ecck.','eccl.','eccm.','eccn.','eg11.','eg12.','eg13.','eg14.',
+							'eg15.','eg16.','eg17.','eg18.','eg19.','eg1A.','eg1B.','eg1C.','eg1w.','eg1x.','eg1y.','eg1z.','eg61.',
+							'eg64.','eg65.','eg67.','eg68.','eg69.','eg6A.','eg6v.','eg6w.','eg6x.','egA1.','egA2.','egA3.','egA4.'
+							)
+		AND gp.EVENT_DT BETWEEN '2008-07-01' AND '2020-12-31';
+	
+Commit;
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_WLGP_UTI_PRE_COH3 AS (SELECT
+		ab.ALF_PE,
+		ab.EVENT_CD AS ANTIBIOTIC_CD,
+		ab.EVENT_STR_DT AS ANTIBIOTIC_STR,
+		ab.EVENT_END_DT AS ANTIBIOTIC_END,
+		uti.EVENT_CD AS UTI_CD,
+		uti.EVENT_STR_DT AS UTI_STR_DT,
+		uti.EVENT_END_DT AS UTI_END_DT
+			FROM	SESSION.VB_GP_ANTIBIOTIC_COH3 AS ab,
+					SESSION.VB_GP_UTI_COH3 AS uti)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+COMMIT;
+			
+INSERT INTO SESSION.VB_WLGP_UTI_PRE_COH3 (
+		ALF_PE,
+		ANTIBIOTIC_CD,
+		ANTIBIOTIC_STR,
+		ANTIBIOTIC_END,
+		UTI_CD,
+		UTI_STR_DT,
+		UTI_END_DT)
+	SELECT 	ab.ALF_PE,
+			ab.EVENT_CD,
+			ab.EVENT_STR_DT,
+			ab.EVENT_END_DT,
+			uti.EVENT_CD,
+			uti.EVENT_STR_DT,
+			uti.EVENT_END_DT
+		FROM	SESSION.VB_GP_ANTIBIOTIC_COH3 AS ab
+			INNER JOIN SESSION.VB_GP_UTI_COH3 AS uti
+				ON	ab.ALF_PE = uti.ALF_PE
+				AND	ab.EVENT_STR_DT = uti.EVENT_STR_DT
+				AND ab.ALF_STS_CD IN ('1','4','39')
+				AND uti.ALF_STS_CD IN ('1','4','39');
+			
+COMMIT;
+
+CREATE TABLE SAILW1169V.VB_WLGP_UTI_COH3
+	(ALF_PE VARCHAR(20),
+	EVENT_STR_DT DATE,
+	EVENT_END_DT DATE)
+not logged INITIALLY;
+
+INSERT INTO SAILW1169V.VB_WLGP_UTI_COH3
+	(ALF_PE,
+	EVENT_STR_DT,
+	EVENT_END_DT)
+	SELECT ALF_PE,
+			UTI_STR_DT,
+			UTI_END_DT
+		FROM SESSION.VB_WLGP_UTI_PRE_COH3;
+	
+COMMIT;
+	
+ALTER TABLE SAILW1169V.VB_WLGP_UTI_COH3
+	ADD COLUMN DATA_SOURCE VARCHAR(4);
+
+UPDATE SAILW1169V.VB_WLGP_UTI_COH3
+	SET DATA_SOURCE = 'WLGP';
+-----------------------------------------------
+
+--identify people with a UTI from PEDW ICD-10 codes during study period
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_PEDW_DIAG_UTI_COH3
+	AS (SELECT * FROM SAIL1169V.PEDW_DIAG_20210704) DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_PEDW_DIAG_UTI_COH3
+	SELECT * FROM SAIL1169V.PEDW_DIAG_20210704 AS diag
+		WHERE diag.DIAG_CD_1234 LIKE '%N10%'
+		OR diag.DIAG_CD_1234 LIKE '%N12%'
+		OR diag.DIAG_CD_1234 LIKE '%N300%'
+		OR diag.DIAG_CD_1234 LIKE '%N308%'
+		OR diag.DIAG_CD_1234 LIKE '%N309%'
+		OR diag.DIAG_CD_1234 LIKE '%N390%';
+	
+Commit;
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_PEDW_EPS_UTI_COH3
+	AS (SELECT	eps.PROV_UNIT_CD,
+				eps.SPELL_NUM_PE,
+				eps.EPI_NUM,
+				diag.DIAG_CD_1234,
+				diag.DIAG_NUM,
+				eps.EPI_STR_DT,
+				eps.EPI_END_DT,
+				eps.EPI_DUR
+			FROM SAIL1169V.PEDW_EPISODE_20210704 AS EPS,
+				SAIL1169V.PEDW_DIAG_20210704 AS diag) DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+Commit;
+
+INSERT INTO SESSION.VB_PEDW_EPS_UTI_COH3
+		(PROV_UNIT_CD,
+		SPELL_NUM_PE,
+		EPI_NUM,
+		DIAG_CD_1234,
+		DIAG_NUM,
+		EPI_STR_DT,
+		EPI_END_DT,
+		EPI_DUR)
+		SELECT	eps.PROV_UNIT_CD,
+				eps.SPELL_NUM_PE,
+				eps.EPI_NUM,
+				diag.DIAG_CD_1234,
+				diag.DIAG_NUM,
+				eps.EPI_STR_DT,
+				eps.EPI_END_DT,
+				eps.EPI_DUR
+			FROM SESSION.VB_PEDW_DIAG_UTI_COH3 AS diag
+				LEFT JOIN SAIL1169V.PEDW_EPISODE_20210704 AS eps
+					ON diag.PROV_UNIT_CD = eps.PROV_UNIT_CD
+					AND diag.SPELL_NUM_PE = eps.SPELL_NUM_PE
+					AND diag.EPI_NUM = eps.EPI_NUM
+		WHERE eps.EPI_STR_DT BETWEEN '2008-07-01' AND '2020-12-31';
+	
+Commit;
+
+CREATE TABLE SAILW1169V.VB_PEDW_UTI_COH3 AS (SELECT
+		sp.ALF_PE,
+		sp.ALF_STS_CD,
+		sp.PROV_UNIT_CD,
+		sp.SPELL_NUM_PE,
+		sp.GNDR_CD AS PEDW_GNDR_CD,
+		sp.ADMIS_DT,
+		sp.DISCH_DT,
+		sp.SPELL_DUR,
+		eps.EPI_NUM,
+		eps.EPI_STR_DT AS EVENT_STR_DT,
+		eps.EPI_END_DT AS EVENT_END_DT,
+		eps.EPI_DUR AS EVENT_DUR,
+		diag.DIAG_CD_1234,
+		diag.DIAG_NUM
+			FROM SAIL1169V.PEDW_SPELL_20210704 AS sp,
+				SAIL1169V.PEDW_EPISODE_20210704 AS eps,
+				SAIL1169V.PEDW_DIAG_20210704 AS diag) WITH NO DATA;		
+			
+alter table SAILW1169V.VB_PEDW_UTI_COH3 activate not logged INITIALLY;
+			
+INSERT INTO SAILW1169V.VB_PEDW_UTI_COH3
+		(ALF_PE,
+		ALF_STS_CD,
+		PROV_UNIT_CD,
+		SPELL_NUM_PE,
+		PEDW_GNDR_CD,
+		ADMIS_DT,
+		DISCH_DT,
+		SPELL_DUR,
+		EPI_NUM,
+		EVENT_STR_DT,
+		EVENT_END_DT,
+		EVENT_DUR,
+		DIAG_CD_1234,
+		DIAG_NUM)
+	SELECT 	sp.ALF_PE,
+			sp.ALF_STS_CD,
+			sp.PROV_UNIT_CD,
+			sp.SPELL_NUM_PE,
+			sp.GNDR_CD,
+			sp.ADMIS_DT,
+			sp.DISCH_DT,
+			sp.SPELL_DUR,
+			eps.EPI_NUM,
+			eps.EPI_STR_DT,
+			eps.EPI_END_DT,
+			eps.EPI_DUR,
+			eps.DIAG_CD_1234,
+			eps.DIAG_NUM
+		FROM SAIL1169V.PEDW_SPELL_20210704 AS sp
+			RIGHT JOIN SESSION.VB_PEDW_EPS_UTI_COH3 AS eps
+				ON sp.PROV_UNIT_CD = eps.PROV_UNIT_CD
+				AND sp.SPELL_NUM_PE = eps.SPELL_NUM_PE;
+			
+COMMIT;
+			
+ALTER TABLE SAILW1169V.VB_PEDW_UTI_COH3
+	ADD COLUMN DATA_SOURCE VARCHAR(4);
+
+UPDATE SAILW1169V.VB_PEDW_UTI_COH3
+	SET DATA_SOURCE = 'PEDW';
+
+--combine UTIs into single table
+
+CREATE TABLE SAILW1169V.VB_ALL_UTI_COH3 AS
+	(SELECT ALF_PE,
+			EVENT_STR_DT,
+			EVENT_END_DT,
+			DATA_SOURCE
+		FROM SAILW1169V.VB_PEDW_UTI_COH3
+			) WITH NO DATA;
+		
+alter table SAILW1169V.VB_ALL_UTI_COH3 activate not logged INITIALLY;
+
+INSERT INTO SAILW1169V.VB_ALL_UTI_COH3
+	(ALF_PE,
+	EVENT_STR_DT,
+	EVENT_END_DT,
+	DATA_SOURCE)
+	SELECT wlgp.ALF_PE,
+			wlgp.EVENT_STR_DT,
+			wlgp.EVENT_END_DT,
+			wlgp.DATA_SOURCE FROM SAILW1169V.VB_WLGP_UTI_COH3 AS wlgp
+	UNION SELECT pedw.ALF_PE, 
+				pedw.EVENT_STR_DT,
+				pedw.EVENT_END_DT,
+				pedw.DATA_SOURCE FROM SAILW1169V.VB_PEDW_UTI_COH3 AS pedw;
+			
+COMMIT;
+
+--delete uti alf_pes where not in the cohort
+
+DELETE FROM SAILW1169V.VB_ALL_UTI_COH3 AS uti
+		WHERE NOT EXISTS (
+			SELECT coh.ALF_PE FROM SAILW1169V.VB_GP_GOOD_ALF_REG_18 AS coh
+				WHERE coh.ALF_PE = uti.ALF_PE);
+
+--add WOB column
+
+ALTER TABLE SAILW1169V.VB_ALL_UTI_COH3
+	ADD COLUMN WOB DATE;
+
+MERGE INTO SAILW1169V.VB_ALL_UTI_COH3 AS uti
+	USING (SELECT DISTINCT ALF_PE, WOB FROM SAILW1169V.VB_GP_GOOD_ALF_REG_18) AS coh
+		ON uti.ALF_PE = coh.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET uti.WOB = coh.WOB
+			;
+			
+--------------------------------------------------------------------------------
+--combine events occuring within 28 days, retains first data source	
+		
+CREATE TABLE SAILW1169V.VB_ALL_UTI_COMB_PRE_COH3
+	(ALF_PE VARCHAR(20),
+	EVENT_STR_DT DATE,
+	EVENT_END_DT DATE,
+	WOB DATE,
+	DATA_SOURCE VARCHAR(15))
+NOT logged INITIALLY;
+
+INSERT INTO SAILW1169V.VB_ALL_UTI_COMB_PRE_COH3 (
+	ALF_PE,
+	EVENT_STR_DT,
+	EVENT_END_DT,
+	WOB,
+	DATA_SOURCE)
+	SELECT uti.ALF_PE,
+			uti.EVENT_STR_DT,
+			min(temp1.EVENT_END_DT),
+			uti.WOB,
+			uti.DATA_SOURCE
+		FROM SAILW1169V.VB_ALL_UTI_COH3 AS uti
+			INNER JOIN SAILW1169V.VB_ALL_UTI_COH3 AS temp1
+				ON uti.ALF_PE = temp1.ALF_PE
+				AND uti.EVENT_STR_DT <= temp1.EVENT_END_DT
+				AND NOT EXISTS
+					(SELECT * FROM SAILW1169V.VB_ALL_UTI_COH3 AS temp2
+						WHERE temp2.ALF_PE = temp1.ALF_PE
+						AND (temp1.EVENT_END_DT + 27) >= temp2.EVENT_STR_DT
+						AND temp1.EVENT_END_DT < temp2.EVENT_END_DT)
+			WHERE NOT EXISTS(SELECT * FROM SAILW1169V.VB_ALL_UTI_COH3 AS uti2
+								WHERE uti2.ALF_PE = uti.ALF_PE
+								AND uti.EVENT_STR_DT > uti2.EVENT_STR_DT
+								AND (uti.EVENT_STR_DT - 27) <= uti2.EVENT_END_DT)
+			GROUP BY uti.ALF_PE,
+					uti.EVENT_STR_DT,
+					uti.WOB,
+					uti.DATA_SOURCE
+			ORDER BY uti.ALF_PE,
+					uti.EVENT_STR_DT;
+				
+COMMIT;
+
+--identify where multiple data sources recorded events on the same day
+
+CALL FNC.DROP_IF_EXISTS ('SESSION.VB_MULTI_UTI_SAME_DAY_COH3');
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_MULTI_UTI_SAME_DAY_COH3 AS (
+	SELECT	ALF_PE,
+			EVENT_STR_DT,
+			EVENT_END_DT,
+			WOB,
+			DATA_SOURCE
+	FROM SAILW1169V.VB_ALL_UTI_COMB_PRE_COH3)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+INSERT INTO SESSION.VB_MULTI_UTI_SAME_DAY_COH3
+(	ALF_PE,
+	EVENT_STR_DT,
+	EVENT_END_DT,
+	WOB,
+	DATA_SOURCE)
+WITH CTE AS 
+(SELECT uti.* FROM SAILW1169V.VB_ALL_UTI_COMB_PRE_COH3 AS uti
+INNER JOIN (SELECT ALF_PE, EVENT_STR_DT, COUNT(EVENT_STR_DT)
+FROM SAILW1169V.VB_ALL_UTI_COMB_PRE_COH3
+GROUP BY ALF_PE, EVENT_STR_DT
+HAVING COUNT(EVENT_STR_DT) > 1
+ORDER BY ALF_PE, EVENT_STR_DT) AS multi
+ON uti.ALF_PE = multi.ALF_PE
+AND uti.EVENT_STR_DT = multi.EVENT_STR_DT)
+SELECT DISTINCT uti2.ALF_PE, uti2.EVENT_STR_DT, uti2.EVENT_END_DT, uti2.WOB, 'MIXED SOURCE' AS DATA_SOURCE
+	FROM CTE
+	INNER JOIN SAILW1169V.VB_ALL_UTI_COMB_PRE_COH3 AS uti2
+	ON CTE.ALF_PE = uti2.ALF_PE
+	AND CTE.EVENT_STR_DT = uti2.EVENT_STR_DT;
+
+COMMIT;
+
+CALL FNC.DROP_IF_EXISTS ('SESSION.VB_SINGLE_UTI_SAME_DAY_COH3');
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_SINGLE_UTI_SAME_DAY_COH3 AS (
+	SELECT	ALF_PE,
+			EVENT_STR_DT,
+			EVENT_END_DT,
+			WOB,
+			DATA_SOURCE
+	FROM SAILW1169V.VB_ALL_UTI_COMB_PRE_COH3)
+DEFINITION ONLY
+ON COMMIT PRESERVE ROWS;
+
+INSERT INTO SESSION.VB_SINGLE_UTI_SAME_DAY_COH3
+(	ALF_PE,
+	EVENT_STR_DT,
+	EVENT_END_DT,
+	WOB,
+	DATA_SOURCE)
+WITH CTE AS 
+(SELECT uti.* FROM SAILW1169V.VB_ALL_UTI_COMB_PRE_COH3 AS uti
+INNER JOIN (SELECT ALF_PE, EVENT_STR_DT, COUNT(EVENT_STR_DT)
+FROM SAILW1169V.VB_ALL_UTI_COMB_PRE_COH3
+GROUP BY ALF_PE, EVENT_STR_DT
+HAVING COUNT(EVENT_STR_DT) = 1
+ORDER BY ALF_PE, EVENT_STR_DT) AS multi
+ON uti.ALF_PE = multi.ALF_PE
+AND uti.EVENT_STR_DT = multi.EVENT_STR_DT)
+SELECT DISTINCT uti2.ALF_PE, uti2.EVENT_STR_DT, uti2.EVENT_END_DT, uti2.WOB, uti2.DATA_SOURCE
+	FROM CTE
+	INNER JOIN SAILW1169V.VB_ALL_UTI_COMB_PRE_COH3 AS uti2
+	ON CTE.ALF_PE = uti2.ALF_PE
+	AND CTE.EVENT_STR_DT = uti2.EVENT_STR_DT;
+
+COMMIT;
+
+-----------------------------------------------------------------------------------------------
+--combine single and multi doses into a single table 
+
+CALL FNC.DROP_IF_EXISTS ('SAILW1169V.VB_ALL_UTI_COMB_COH3');
+
+CREATE TABLE SAILW1169V.VB_ALL_UTI_COMB_COH3 AS (
+	SELECT	ALF_PE,
+			EVENT_STR_DT,
+			EVENT_END_DT,
+			WOB,
+			DATA_SOURCE
+		FROM SAILW1169V.VB_ALL_UTI_COMB_PRE_COH3)
+WITH NO DATA;
+
+INSERT INTO SAILW1169V.VB_ALL_UTI_COMB_COH3
+SELECT * FROM SESSION.VB_SINGLE_UTI_SAME_DAY_COH3;
+
+INSERT INTO SAILW1169V.VB_ALL_UTI_COMB_COH3
+SELECT * FROM SESSION.VB_MULTI_UTI_SAME_DAY_COH3;
+							
+---------------------------------------------------------------------------------------------------------------
+
+--Add lag 1 uti date to identify whether there was a previous event within 6 months
+
+ALTER TABLE SAILW1169V.VB_ALL_UTI_COMB_COH3
+ADD COLUMN PREV_EVENT_STR_DT DATE
+ADD COLUMN PREV_EVENT_END_DT DATE
+ADD COLUMN TWO_EVENT_6_MNT INTEGER
+ADD COLUMN PREV_EVENT_DATA_SOURCE VARCHAR(15);
+
+UPDATE SAILW1169V.VB_ALL_UTI_COMB_COH3
+SET PREV_EVENT_STR_DT= LAG(EVENT_STR_DT) OVER(PARTITION BY ALF_PE ORDER BY EVENT_STR_DT);
+
+UPDATE SAILW1169V.VB_ALL_UTI_COMB_COH3
+SET PREV_EVENT_END_DT= LAG(EVENT_END_DT) OVER(PARTITION BY ALF_PE ORDER BY EVENT_STR_DT);
+
+UPDATE SAILW1169V.VB_ALL_UTI_COMB_COH3 AS uti
+	SET TWO_EVENT_6_MNT = CASE WHEN MONTHS_BETWEEN(uti.EVENT_STR_DT, uti.PREV_EVENT_END_DT) < 6 THEN 1
+		ELSE 0
+			END;
+		
+UPDATE SAILW1169V.VB_ALL_UTI_COMB_COH3
+SET PREV_EVENT_DATA_SOURCE= LAG(DATA_SOURCE) OVER(PARTITION BY ALF_PE ORDER BY EVENT_STR_DT);
+
+--Add lag 2 uti date to identify whether there were two previous events within 12 months
+
+ALTER TABLE SAILW1169V.VB_ALL_UTI_COMB_COH3
+ADD COLUMN PREV2_EVENT_STR_DT DATE
+ADD COLUMN PREV2_EVENT_END_DT DATE
+ADD COLUMN THREE_EVENT_12_MNT INTEGER
+ADD COLUMN PREV2_EVENT_DATA_SOURCE VARCHAR(15);
+
+UPDATE SAILW1169V.VB_ALL_UTI_COMB_COH3
+SET PREV2_EVENT_STR_DT= LAG(EVENT_STR_DT,2) OVER(PARTITION BY ALF_PE ORDER BY EVENT_STR_DT);
+
+UPDATE SAILW1169V.VB_ALL_UTI_COMB_COH3
+SET PREV2_EVENT_END_DT= LAG(EVENT_END_DT,2) OVER(PARTITION BY ALF_PE ORDER BY EVENT_END_DT);
+
+UPDATE SAILW1169V.VB_ALL_UTI_COMB_COH3 AS uti
+	SET THREE_EVENT_12_MNT = CASE WHEN MONTHS_BETWEEN(uti.EVENT_STR_DT, uti.PREV2_EVENT_END_DT) < 12 THEN 1
+		ELSE 0
+			END;
+		
+UPDATE SAILW1169V.VB_ALL_UTI_COMB_COH3
+SET PREV2_EVENT_DATA_SOURCE= LAG(DATA_SOURCE,2) OVER(PARTITION BY ALF_PE ORDER BY EVENT_STR_DT);
+		
+--Add data source group
+
+ALTER TABLE SAILW1169V.VB_ALL_UTI_COMB_COH3
+ADD COLUMN DATA_SOURCE_GROUP VARCHAR(12);
+
+UPDATE SAILW1169V.VB_ALL_UTI_COMB_COH3 AS uti
+	SET uti.DATA_SOURCE_GROUP = CASE WHEN uti.TWO_EVENT_6_MNT = 1
+	THEN CASE WHEN DATA_SOURCE = 'PEDW' AND PREV_EVENT_DATA_SOURCE = 'PEDW' THEN 'ALL PEDW'
+					WHEN DATA_SOURCE = 'WLGP' AND PREV_EVENT_DATA_SOURCE = 'WLGP' THEN 'ALL WLGP'
+						ELSE 'MIXED SOURCE'
+							END
+				WHEN uti.TWO_EVENT_6_MNT = 0 AND uti.THREE_EVENT_12_MNT = 1
+	THEN CASE WHEN DATA_SOURCE = 'PEDW' AND PREV_EVENT_DATA_SOURCE = 'PEDW' AND PREV2_EVENT_DATA_SOURCE = 'PEDW' THEN 'ALL PEDW'
+					WHEN DATA_SOURCE = 'WLGP' AND PREV_EVENT_DATA_SOURCE = 'WLGP' AND PREV2_EVENT_DATA_SOURCE = 'WLGP' THEN 'ALL WLGP'
+						ELSE 'MIXED SOURCE'
+							END
+			END;
+		
+--Add first period of gp registration to uti table		
+		
+ALTER TABLE SAILW1169V.VB_ALL_UTI_COMB_COH3
+ADD COLUMN GP_START_DATE DATE
+ADD COLUMN GP_END_DATE DATE;
+
+MERGE INTO SAILW1169V.VB_ALL_UTI_COMB_COH3 AS uti
+	USING SAILW1169V.VB_WLGP_DAYS_IN_COHORT AS gp
+		ON uti.ALF_PE = gp.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET uti.GP_START_DATE = gp.START_DATE
+			;
+			
+MERGE INTO SAILW1169V.VB_ALL_UTI_COMB_COH3 AS uti
+	USING SAILW1169V.VB_WLGP_DAYS_IN_COHORT AS gp
+		ON uti.ALF_PE = gp.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET uti.GP_END_DATE = gp.END_DATE
+			;
+		
+DELETE FROM SAILW1169V.VB_ALL_UTI_COMB_COH3 AS uti
+	WHERE uti.EVENT_STR_DT NOT BETWEEN uti.GP_START_DATE AND uti.GP_END_DATE;
+
+DELETE FROM SAILW1169V.VB_ALL_UTI_COMB_COH3 AS uti
+	WHERE uti.EVENT_STR_DT IS NULL;
+
+--count of individuals with recurrent utis
+
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_REC_UTI_ALF_COH3');
+
+CREATE TABLE SAILW1169V.VB_REC_UTI_ALF_COH3
+	(ALF_PE Varchar(20),
+	DIAG_DATE DATE,
+	WOB DATE,
+	DATA_SOURCE_GROUP VARCHAR(12),
+	GP_START_DATE DATE,
+	GP_END_DATE DATE);
+
+alter table SAILW1169V.VB_REC_UTI_ALF_COH3 activate not logged INITIALLY;
+	
+INSERT INTO SAILW1169V.VB_REC_UTI_ALF_COH3
+	(ALF_PE,
+	DIAG_DATE,
+	WOB,
+	DATA_SOURCE_GROUP,
+	GP_START_DATE,
+	GP_END_DATE)
+	SELECT uti.ALF_PE,
+			uti.EVENT_STR_DT,
+			uti.WOB, 
+			uti.DATA_SOURCE_GROUP,
+			gp.START_DATE,
+			gp.END_DATE
+	FROM SAILW1169V.VB_ALL_UTI_COMB_COH3 AS uti
+		LEFT JOIN SAILW1169V.VB_WLGP_DAYS_IN_COHORT AS gp
+			ON uti.ALF_PE = gp.ALF_PE
+		WHERE (uti.TWO_EVENT_6_MNT = 1
+		OR uti.THREE_EVENT_12_MNT = 1);
+	
+COMMIT;
+	
+--add column for years of gp data prior to diagnosis
+
+ALTER TABLE SAILW1169V.VB_REC_UTI_ALF_COH3
+	ADD COLUMN GP_REG_YEARS INTEGER;
+
+UPDATE SAILW1169V.VB_REC_UTI_ALF_COH3
+	SET GP_REG_YEARS = YEAR(DIAG_DATE - GP_START_DATE);
+
+---add column for age at recurrent UTI diagnosis date
+
+ALTER TABLE SAILW1169V.VB_REC_UTI_ALF_COH3
+	ADD COLUMN AGEDIAG INTEGER;
+
+UPDATE SAILW1169V.VB_REC_UTI_ALF_COH3
+	SET AGEDIAG = YEAR(DIAG_DATE - WOB)
+	;
+
+--delete records where gp start date is NULL
+
+DELETE FROM SAILW1169V.VB_REC_UTI_ALF_COH3
+	WHERE GP_START_DATE IS NULL;
+
+----------------------------------------------------------------------------------------------------
+
+--Add rUTI flag where rUTI diagnosis criteria was met within 18 months of pAbx start
+		
+ALTER TABLE SAILW1169V.VB_COHORT3
+ADD COLUMN RUTI_DIAG_DT DATE
+ADD COLUMN RUTI_DIAG INTEGER;
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh3
+USING (SELECT coh2.ALF_PE, coh2.PABX_STR, min(ruti.DIAG_DATE) AS RUTI_DIAG_DT
+					FROM SAILW1169V.VB_COHORT3 AS coh2
+					LEFT JOIN SAILW1169V.VB_REC_UTI_ALF_COH3 AS ruti
+					ON coh2.ALF_PE = ruti.ALF_PE
+					WHERE MONTHS_BETWEEN(coh2.PABX_STR, ruti.DIAG_DATE) BETWEEN 0 AND 18
+						GROUP BY coh2.ALF_PE, coh2.PABX_STR) AS mqo
+		ON coh3.ALF_PE = mqo.ALF_PE
+		WHEN MATCHED THEN UPDATE 
+		SET coh3.RUTI_DIAG_DT = mqo.RUTI_DIAG_DT;
+		
+UPDATE SAILW1169V.VB_COHORT3
+SET RUTI_DIAG = CASE WHEN RUTI_DIAG_DT IS NULL
+					THEN 0
+					ELSE 1
+				END;
+			
+-------------------------------------------------------------------------------------------------------
+--Add flag for under 18 at rUTI diagnosis but 18+ at pAbx start
+
+--Link UTI age with pAbx cohort3
+--select records where individuals were aged under 18 as at recurrent UTI diagnosis date and 18+ at pAbx start
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+ADD COLUMN RUTI_UNDER_18 INTEGER;
+
+UPDATE SAILW1169V.VB_COHORT3 AS coh
+SET RUTI_UNDER_18 = 1
+WHERE coh.ALF_PE IN 
+	(SELECT DISTINCT ALF_PE FROM
+(SELECT uti.* FROM SAILW1169V.VB_REC_UTI_ALF_COH3 AS uti
+LEFT JOIN SAILW1169V.VB_COHORT3 AS coh
+ON uti.ALF_PE = coh.ALF_PE
+WHERE uti.AGEDIAG < '18'
+AND YEARS_BETWEEN(coh.WOB, PABX_STR) <= 18
+AND MONTHS_BETWEEN(PABX_STR, DIAG_DATE) <18));
+
+UPDATE SAILW1169V.VB_COHORT3
+SET RUTI_UNDER_18 = CASE WHEN RUTI_UNDER_18 IS NULL THEN 0
+							ELSE RUTI_UNDER_18
+								END;
+							
+-------------------------------------------------------------------------------------------------------
+--Add first Abx date
+
+CALL FNC.DROP_IF_EXISTS ('SESSION.VB_UTI_MULTI_SOURCES');
+
+DECLARE GLOBAL TEMPORARY TABLE SESSION.VB_UTI_MULTI_SOURCES
+(ALF_PE VARCHAR(15),
+DATA_SOURCE VARCHAR(5))
+ON COMMIT PRESERVE ROWS;
+
+COMMIT;
+
+INSERT INTO SESSION.VB_UTI_MULTI_SOURCES
+with cte as
+(SELECT coh.ALF_PE, coh.FIRST_ABX, max(jny.EVENT_STR_DT) AS max_uti FROM SAILW1169V.VB_COHORT3 AS coh
+LEFT JOIN SAILW1169V.VB_ALL_UTI_ALL_DATE AS jny
+ON coh.ALF_PE = jny.ALF_PE
+WHERE jny.EVENT_STR_DT <= coh.FIRST_ABX
+GROUP BY coh.ALF_PE, FIRST_ABX),
+CTE2 AS
+(SELECT DISTINCT cte.alf_pe, jny2.DATA_SOURCE FROM SAILW1169V.VB_ALL_UTI_ALL_DATE AS jny2
+RIGHT JOIN cte
+ON jny2.ALF_PE = cte.alf_pe
+AND jny2.EVENT_STR_DT = cte.max_uti
+ORDER BY cte.alf_pe)
+SELECT ALF_PE, 'Multi' FROM CTE2
+GROUP BY ALF_PE
+HAVING COUNT(ALF_PE)>1
+;
+
+INSERT INTO SESSION.VB_UTI_MULTI_SOURCES
+with cte as
+(SELECT coh.ALF_PE, coh.FIRST_ABX, max(jny.EVENT_STR_DT) AS max_uti FROM SAILW1169V.VB_COHORT3 AS coh
+LEFT JOIN SAILW1169V.VB_ALL_UTI_ALL_DATE AS jny
+ON coh.ALF_PE = jny.ALF_PE
+WHERE jny.EVENT_STR_DT <= coh.FIRST_ABX
+AND coh.ALF_PE NOT IN (SELECT ALF_PE FROM SESSION.VB_UTI_MULTI_SOURCES)
+GROUP BY coh.ALF_PE, FIRST_ABX),
+CTE2 AS
+(SELECT DISTINCT cte.alf_pe, jny2.DATA_SOURCE FROM SAILW1169V.VB_ALL_UTI_ALL_DATE AS jny2
+RIGHT JOIN cte
+ON jny2.ALF_PE = cte.alf_pe
+AND jny2.EVENT_STR_DT = cte.max_uti
+ORDER BY cte.alf_pe)
+SELECT ALF_PE, DATA_SOURCE FROM CTE2
+;
+
+COMMIT;
+
+ALTER TABLE SAILW1169V.VB_COHORT3
+ADD COLUMN UTI_DATA_SOURCE VARCHAR(5);
+
+MERGE INTO SAILW1169V.VB_COHORT3 AS coh
+	USING SESSION.VB_UTI_MULTI_SOURCES AS uti
+		ON uti.ALF_PE = coh.ALF_PE
+			WHEN MATCHED THEN
+				UPDATE
+				SET coh.UTI_DATA_SOURCE = uti.DATA_SOURCE
+			;
+
+-------------------------------------------------------------------------------------------------------
+--CREATE cohort3 analysis ready TABLE
+			
+CALL FNC.DROP_IF_EXISTS('SAILW1169V.VB_COHORT3_ANALYSIS_READY');
+
+CREATE TABLE SAILW1169V.VB_COHORT3_ANALYSIS_READY AS
+(SELECT	ALF_PE AS ALF,
+		WOB AS BIRTH_WEEK,
+		BIRTH_YEAR,
+		PABX_STR AS PABX_START,
+		FIRST_ABX,
+		UTI_DATA_SOURCE,
+		ETHNIC,
+		SMOK,
+		BMI_VAL AS BMI,
+		ALCOHOL_FLG AS ALCOHOL,
+		EFI AS FRAILTY,
+		DIAB,
+		CANCER,
+		RENAL_DISEASE AS CKD,
+		HTN,
+		IHD,
+		CVD,
+		CCF,
+		MS,
+		MND,
+		DEMENTIA,
+		PD,
+		SEVERE_MENT,
+		ASTHMA,
+		COPD,
+		IMMUN_SUPP,
+		RENAL_STONE,
+		RENALTRACT_ABNORM,
+		ALT_ABX_TYPE AS PABX_TYPE,
+		DOSE AS PABX_DOSE,
+		UNITS AS PABX_UNITS,
+		DOSE_CONSISTENCY,
+		RUTI_DIAG,
+		RUTI_DIAG_DT,
+		RUTI_UNDER_18,
+		WIMD
+FROM SAILW1169V.VB_COHORT3)
+WITH NO DATA;
+
+ALTER TABLE SAILW1169V.VB_COHORT3_ANALYSIS_READY
+ADD COLUMN RUTI_TO_PABX_DAYS INTEGER;
+
+INSERT INTO SAILW1169V.VB_COHORT3_ANALYSIS_READY
+SELECT	ALF_PE,
+		WOB,
+		BIRTH_YEAR,
+		PABX_STR,
+		FIRST_ABX,
+		CASE WHEN UTI_DATA_SOURCE = 'WLGP' THEN 1
+			WHEN UTI_DATA_SOURCE = 'PEDW' THEN 2
+			WHEN UTI_DATA_SOURCE = 'Multi' THEN 3
+			ELSE NULL
+			END,
+		ETHNIC,
+		SMOK,
+		BMI_VAL,
+		ALCOHOL_FLG,
+		EFI,
+		DIAB,
+		CANCER,
+		RENAL_DISEASE,
+		HTN,
+		IHD,
+		CVD,
+		CCF,
+		MS,
+		MND,
+		DEMENTIA,
+		PD,
+		SEVERE_MENT,
+		ASTHMA,
+		COPD,
+		IMMUN_SUPP,
+		RENAL_STONE,
+		RENALTRACT_ABNORM,
+		ALT_ABX_TYPE,
+		DOSE,
+		UNITS,
+		DOSE_CONSISTENCY,
+		RUTI_DIAG,
+		RUTI_DIAG_DT,
+		RUTI_UNDER_18,
+		WIMD,
+		DAYS_BETWEEN(PABX_STR, RUTI_DIAG_DT)
+FROM SAILW1169V.VB_COHORT3;
+
+SELECT * FROM SAILW1169V.VB_COHORT3_ANALYSIS_READY;
+
+SELECT * FROM SAILW1169V.VB_PABX_COH3
+WHERE ALF_PE = 38219489;
+ORDER BY EVENT_DT;
+
+WITH CTE AS
+	(SELECT coh.ALF_PE, coh.PABX_STR, coh.FIRST_ABX, abx.ALT_STR_DT_COMB, abx.ALT_END_DT_COMB FROM SAILW1169V.VB_PABX_COH3 AS coh
+		LEFT JOIN SAILW1169V.VB_ALTERNATING_PABX_COH3_PRE AS abx
+		ON coh.ALF_PE = abx.ALF_PE
+		WHERE coh.FIRST_ABX > abx.ALT_END_DT_COMB 
+		AND	MONTHS_BETWEEN(coh.FIRST_ABX,abx.ALT_END_DT_COMB) < 12
+		ORDER BY coh.ALF_PE)
+SELECT coh.ALF, coh.FIRST_ABX
+	FROM SAILW1169V.VB_COHORT3_ANALYSIS_READY AS coh
+	INNER JOIN CTE
+	ON coh.ALF||coh.FIRST_ABX = CTE.ALF_PE||CTE.FIRST_ABX;
