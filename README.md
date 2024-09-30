@@ -1,6 +1,5 @@
 # ImPART
 ### IMproving Prophylactic Antibiotic use for Recurrent urinary Tract infection
-### Recurrent urinary tract infections and prophylactic antibiotic use in women: a cross-sectional study in primary care
 
 ## 📝 Project Description
 
@@ -15,10 +14,27 @@ A population-based study of 92,213 women with recurrent urinary tract infections
 
 The aim of this research is to improve the use of long-term antibiotics used to prevent urinary tract infections (UTIs) in patients who have recurrent UTIs.
 
+#### Corresponding Author
+
+Leigh Sanyaolu  
+Division of Population Medicine,  
+Cardiff University,  
+3rd Floor,  
+Neuadd Meirionnydd,  
+Heath Park,  
+Cardiff,
+CF14 4YS UK  
+Email: SanyaoluLN@cardiff.ac.uk
+
 ## 🖋 How to cite this work
 
+### Recurrent urinary tract infections and prophylactic antibiotic use in women: a cross-sectional study in primary care
 Sanyaolu S, et al. (2024). Recurrent urinary tract infections and prophylactic antibiotic use in women: a cross-sectional study in primary care. British Journal of General Practice 2024; 74 (746): e619-e627. DOI: https://doi.org/10.3399/BJGP.2024.0015
 
+### Prophylactic antibiotics to prevent recurrent UTIs and risk of antibiotic resistance: target trial emulation using the SAIL databank
+  
+#### To be added
+  
 ## 📃 Funding
 
 This research is funded by the Welsh Government through Health and Care Research Wales (NIHR-FS-2021-LS). 
