@@ -1,12 +1,15 @@
 # ImPART
 ### IMproving Prophylactic Antibiotic use for Recurrent urinary Tract infection
+### Recurrent urinary tract infections and prophylactic antibiotic use in women: a cross-sectional study in primary care
 
 ## 📝 Project Description
 
-### Leigh Sanyaolu <sup>1</sup>, Ashley Akbari <sup>2</sup>, Victoria Best <sup>2</sup>, Others to be added
+### Leigh Sanyaolu <sup>1</sup>, Victoria Best <sup>2</sup>, Rebecca Cannings-John <sup>3</sup>, Fiona Woods <sup>1</sup>, Adrian Edwards <sup>1</sup>, Ashley Akbari <sup>2</sup>, Gail Hayward <sup>4</sup>, Haroon Ahmed <sup>1</sup>
 
-<sup>1</sup> Division of Population Medicine, Cardiff University <br>
+<sup>1</sup> Division of Population Medicine and PRIME Centre Wales, Cardiff University <br>
 <sup>2</sup> Population Data Science, Swansea University Medical School, Faculty of Medicine, Health & Life Science, Swansea University <br>
+<sup>3</sup> Centre for Trials Research, Cardiff University <br>
+<sup>4</sup> Nuffield Department of Primary Care Health Sciences, Oxford University <br>
 
 A population-based study of 92,213 women with recurrent urinary tract infections and 26,862 women using prophylactic antibiotic users including urine microbiology and resistance patterns: a cross sectional study in Wales from 2010-2020.
 
@@ -14,7 +17,7 @@ The aim of this research is to improve the use of long-term antibiotics used to 
 
 ## 🖋 How to cite this work
 
-To be added - not yet published
+Sanyaolu S, et al. (2024). Recurrent urinary tract infections and prophylactic antibiotic use in women: a cross-sectional study in primary care. British Journal of General Practice 2024; 74 (746): e619-e627. DOI: https://doi.org/10.3399/BJGP.2024.0015
 
 ## 📃 Funding
 
@@ -26,7 +29,7 @@ This study makes use of anonymised data held in the Secure Anonymised Informatio
 
 ## 🤝 Project approval
 
-All research has been completed under the permission and approval of the SAIL independent Information Governance Review Panel (IGRP) project number 0911. Further details of this process can be found on the SAIL Databank website (https://saildatabank.com/)
+All research has been completed under the permission and approval of the SAIL independent Information Governance Review Panel (IGRP) project number 1161. Further details of this process can be found on the SAIL Databank website (https://saildatabank.com/)
 
 ## ♻️ License
 
