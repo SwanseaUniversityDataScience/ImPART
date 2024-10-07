@@ -3,7 +3,7 @@
 
 ## 📝 Project Description
 
-### Leigh Sanyaolu <sup>1</sup>, Victoria Best <sup>2</sup>, Rebecca Cannings-John <sup>3</sup>, Fiona Woods <sup>1</sup>, Adrian Edwards <sup>1</sup>, Ashley Akbari <sup>2</sup>, Gail Hayward <sup>4</sup>, Haroon Ahmed <sup>1</sup>
+### Leigh Sanyaolu <sup>1</sup>, Victoria Best <sup>2</sup>, Rebecca Cannings-John <sup>3</sup>, Fiona Wood <sup>1</sup>, Adrian Edwards <sup>1</sup>, Ashley Akbari <sup>2</sup>, Gail Hayward <sup>4</sup>, Haroon Ahmed <sup>1</sup>
 
 <sup>1</sup> Division of Population Medicine and PRIME Centre Wales, Cardiff University <br>
 <sup>2</sup> Population Data Science, Swansea University Medical School, Faculty of Medicine, Health & Life Science, Swansea University <br>
